@@ -1,0 +1,77 @@
+MIT License
+
+Copyright (c) 2026 MobileAgent
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Third-Party Licenses
+
+This project uses the following third-party tools and libraries:
+
+### MCP (Model Context Protocol)
+- License: Open Source (Linux Foundation / Agentic AI Foundation)
+- URL: https://modelcontextprotocol.io/
+- Note: Originally open-sourced by Anthropic (Nov 2024), donated to Agentic AI Foundation (Dec 2025)
+
+### mobile-mcp
+- License: Apache-2.0
+- URL: https://github.com/mobile-next/mobile-mcp
+- Copyright: mobile-next
+
+### context7
+- License: MIT
+- URL: https://github.com/upstash/context7
+- Copyright: Upstash
+
+### ADB (Android Debug Bridge)
+- License: Apache-2.0
+- URL: https://developer.android.com/tools/adb
+- Copyright: Google / Android Open Source Project
+
+### ADBKeyboard
+- License: GPL-2.0
+- URL: https://github.com/senzhk/ADBKeyBoard
+- Note: GPL-2.0 requires derivative works to be open-sourced under the same license
+
+### Flask
+- License: BSD-3-Clause
+- URL: https://flask.palletsprojects.com/
+- Copyright: Pallets
+
+### DeviceKit (mobilenext-devicekit)
+- License: Proprietary (mobile-next)
+- URL: https://github.com/mobile-next/mobile-mcp
+- Note: Used for Unicode input support via MCP
+
+---
+
+## License Compatibility Notes
+
+1. **GPL-2.0 (ADBKeyboard)**: This is a copyleft license. If you modify ADBKeyboard, 
+   you must release your modifications under GPL-2.0. However, using ADBKeyboard as 
+   a separate tool (APK) alongside this project does not require this project to be GPL.
+
+2. **Apache-2.0**: Compatible with MIT. Allows commercial use, modification, and distribution.
+
+3. **BSD-3-Clause**: Compatible with MIT. Similar permissive license.
+
+4. **MIT**: Permissive license allowing commercial use, modification, and distribution 
+   with minimal restrictions.

@@ -1,0 +1,26 @@
+{
+  "_comment": "MobileAgent MCP Configuration Example - Copy to your AI Agent settings",
+  "_usage": "Replace <PROJECT_PATH> with your actual project path, e.g., /home/user/MobileAgent",
+  "mcpServers": {
+    "mobile-mcp": {
+      "command": "npx",
+      "args": ["-y", "@mobilenext/mobile-mcp@latest"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "<PROJECT_PATH>"
+      ]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    }
+  }
+}

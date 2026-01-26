@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+*.egg-info/
+.eggs/
+
+# MCP (auto-generated config with local paths)
+mcp/mcp_setting.json
+
+# AI CLI tools - local settings (not for version control)
+.mcp.json
+
+# AI Agent skill directories (auto-generated from .skills/ source by set.sh)
+.cursor/skills/
+.claude/skills/
+.gemini/skills/
+.codex/skills/
+.windsurf/skills/
+.roo/skills/
+
+# Gemini CLI settings (contains local paths)
+.gemini/settings.json
+
+# Claude Code local settings
+.claude/
+
+# Backup files created by set.sh
+*.backup.*
+
+# Outputs (keep README.md, ignore actual outputs)
+outputs/*
+!outputs/README.md
+
+# Temp files
+temp/
+
+# Logs
+*.log
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
+
+# Web
+web/tasks.db

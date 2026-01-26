@@ -1,0 +1,746 @@
+/*
+ * MobileAgent Web UI - Custom Styles
+ * Professional, clean design with solid colors
+ */
+
+/* =============================================================================
+   CSS Variables
+   ============================================================================= */
+:root {
+    --color-bg: #f5f5f5;
+    --color-white: #ffffff;
+    --color-text: #333333;
+    --color-text-muted: #6c757d;
+    --color-border: #dee2e6;
+    --color-primary: #0d6efd;
+    --color-success: #198754;
+    --color-warning: #ffc107;
+    --color-danger: #dc3545;
+    --color-info: #0dcaf0;
+    --color-header-bg: #2c3e50;
+    --color-header-text: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.1);
+    --radius: 6px;
+    --radius-lg: 8px;
+}
+
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5;
+    margin: 0;
+    padding: 0;
+}
+
+/* =============================================================================
+   Header
+   ============================================================================= */
+.header {
+    background-color: var(--color-header-bg);
+    color: var(--color-header-text);
+    padding: 1rem 1.5rem;
+    box-shadow: var(--shadow-md);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.header-icon {
+    font-size: 1.5rem;
+    margin-right: 0.75rem;
+}
+
+.header-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* =============================================================================
+   Main Content
+   ============================================================================= */
+.main-content {
+    padding: 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* =============================================================================
+   Cards
+   ============================================================================= */
+.card {
+    background-color: var(--color-white);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+}
+
+.card-header {
+    background-color: var(--color-white);
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem 1.25rem;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.card-body {
+    padding: 1.25rem;
+}
+
+/* =============================================================================
+   Tables
+   ============================================================================= */
+.table {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.table th {
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 0.875rem 1rem;
+    background-color: #fafafa;
+    border-bottom: 2px solid var(--color-border);
+}
+
+.table td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Table column widths */
+.col-serial {
+    width: 15%;
+}
+
+.col-status {
+    width: 10%;
+}
+
+.col-model {
+    width: 15%;
+}
+
+.col-task {
+    width: 30%;
+}
+
+.col-taskstatus {
+    width: 15%;
+}
+
+.col-actions {
+    width: 15%;
+}
+
+/* =============================================================================
+   Status Badges
+   ============================================================================= */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 4px;
+}
+
+.status-online {
+    background-color: #d1f7dd;
+    color: #0a5c36;
+}
+
+.status-offline {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.status-pending {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.status-running {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+
+.status-completed {
+    background-color: #d1f7dd;
+    color: #0a5c36;
+}
+
+.status-failed {
+    background-color: #f8d7da;
+    color: #842029;
+}
+
+.status-cancelled {
+    background-color: #e2e3e5;
+    color: #41464b;
+}
+
+.status-idle {
+    background-color: #e9ecef;
+    color: #6c757d;
+}
+
+/* Status indicator dot */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 6px;
+}
+
+.status-dot.online {
+    background-color: var(--color-success);
+}
+
+.status-dot.offline {
+    background-color: var(--color-danger);
+}
+
+.status-dot.running {
+    background-color: var(--color-primary);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* =============================================================================
+   Buttons
+   ============================================================================= */
+.btn {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: var(--radius);
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.btn-sm {
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.625rem;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-group-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* =============================================================================
+   Task Prompt Cell
+   ============================================================================= */
+.task-prompt {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.task-prompt-full {
+    word-break: break-word;
+}
+
+/* =============================================================================
+   Modals
+   ============================================================================= */
+.modal-content {
+    border: none;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--color-border);
+    padding: 1rem 1.25rem;
+}
+
+.modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 1.25rem;
+}
+
+.modal-footer {
+    border-top: 1px solid var(--color-border);
+    padding: 1rem 1.25rem;
+}
+
+/* =============================================================================
+   Form Elements
+   ============================================================================= */
+.form-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-control,
+.form-select {
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-text {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+/* =============================================================================
+   Command Preview
+   ============================================================================= */
+.command-preview {
+    display: block;
+    padding: 0.75rem 1rem;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    border-radius: var(--radius);
+    font-size: 0.8125rem;
+    font-family: "SF Mono", Monaco, "Cascadia Code", "Consolas", monospace;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* =============================================================================
+   Output Content
+   ============================================================================= */
+.output-content {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    padding: 1rem;
+    border-radius: var(--radius);
+    font-size: 0.8125rem;
+    font-family: "SF Mono", Monaco, "Cascadia Code", "Consolas", monospace;
+    max-height: 400px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+}
+
+/* =============================================================================
+   Final Answer Display
+   ============================================================================= */
+.final-answer-container {
+    margin-top: 1rem;
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid #3a3a3a;
+}
+
+.final-answer-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+    border-bottom: 1px solid #3a3a3a;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #a0a0a0;
+}
+
+.final-answer-header i {
+    font-size: 0.875rem;
+}
+
+.final-answer-header.status-success {
+    color: #4ade80;
+}
+
+.final-answer-header.status-failed {
+    color: #f87171;
+}
+
+.final-answer-header.status-awaiting {
+    color: #fbbf24;
+}
+
+.final-answer-header.status-unknown {
+    color: #94a3b8;
+}
+
+.final-answer-content {
+    padding: 0.875rem 1.25rem;
+    background-color: #0d0d0d;
+    color: #e5e5e5;
+    font-family: "SF Mono", Monaco, "Cascadia Code", "Consolas", monospace;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.final-answer-content.status-success {
+    border-left: 3px solid #4ade80;
+}
+
+.final-answer-content.status-failed {
+    border-left: 3px solid #f87171;
+}
+
+.final-answer-content.status-awaiting {
+    border-left: 3px solid #fbbf24;
+}
+
+.final-answer-content.status-unknown {
+    border-left: 3px solid #94a3b8;
+}
+
+/* Status Unknown special styling */
+.final-answer-unknown {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.final-answer-unknown i {
+    font-size: 1.25rem;
+}
+
+/* Markdown styling inside Final Answer (scaled down) */
+.final-answer-content h1,
+.final-answer-content h2,
+.final-answer-content h3,
+.final-answer-content h4,
+.final-answer-content h5,
+.final-answer-content h6 {
+    color: #f0f0f0;
+    margin: 0.375rem 0 0.25rem 0;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.final-answer-content h1 {
+    font-size: 1.125rem;
+}
+
+.final-answer-content h2 {
+    font-size: 1.0625rem;
+}
+
+.final-answer-content h3 {
+    font-size: 1rem;
+}
+
+.final-answer-content h4 {
+    font-size: 0.9375rem;
+}
+
+.final-answer-content h5,
+.final-answer-content h6 {
+    font-size: 0.875rem;
+}
+
+.final-answer-content h1:first-child,
+.final-answer-content h2:first-child,
+.final-answer-content h3:first-child,
+.final-answer-content p:first-child {
+    margin-top: 0;
+}
+
+.final-answer-content p {
+    margin: 0.25rem 0;
+}
+
+.final-answer-content p:last-child {
+    margin-bottom: 0;
+}
+
+.final-answer-content ul,
+.final-answer-content ol {
+    margin: 0.25rem 0;
+    padding-left: 1.5rem;
+}
+
+.final-answer-content li {
+    margin: 0.125rem 0;
+}
+
+.final-answer-content code {
+    background-color: #2a2a2a;
+    color: #f8b500;
+    padding: 0.125rem 0.375rem;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+.final-answer-content pre {
+    background-color: #1a1a1a;
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+}
+
+.final-answer-content pre code {
+    background: none;
+    padding: 0;
+    color: #d4d4d4;
+}
+
+.final-answer-content blockquote {
+    border-left: 3px solid #4a4a4a;
+    margin: 0.5rem 0;
+    padding-left: 1rem;
+    color: #a0a0a0;
+}
+
+.final-answer-content a {
+    color: #60a5fa;
+    text-decoration: none;
+}
+
+.final-answer-content a:hover {
+    text-decoration: underline;
+}
+
+.final-answer-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+}
+
+.final-answer-content th,
+.final-answer-content td {
+    border: 1px solid #3a3a3a;
+    padding: 0.375rem 0.625rem;
+    text-align: left;
+}
+
+.final-answer-content th {
+    background-color: #2a2a2a;
+    font-weight: 600;
+}
+
+.final-answer-content strong {
+    color: #f0f0f0;
+    font-weight: 600;
+}
+
+.final-answer-content em {
+    font-style: italic;
+}
+
+.final-answer-content hr {
+    border: none;
+    border-top: 1px solid #3a3a3a;
+    margin: 0.75rem 0;
+}
+
+/* =============================================================================
+   Responsive Design
+   ============================================================================= */
+
+/* Tablet */
+@media (max-width: 992px) {
+    .main-content {
+        padding: 1rem;
+    }
+
+    .table th,
+    .table td {
+        padding: 0.75rem;
+    }
+
+    .col-serial,
+    .col-model {
+        width: auto;
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .header {
+        padding: 0.75rem 1rem;
+    }
+
+    .header-title {
+        font-size: 1.1rem;
+    }
+
+    .main-content {
+        padding: 0.75rem;
+    }
+
+    .card-header,
+    .card-body {
+        padding: 1rem;
+    }
+
+    /* Stack table cells on mobile */
+    .table-responsive {
+        border: none;
+    }
+
+    #deviceTable thead {
+        display: none;
+    }
+
+    #deviceTable tbody tr {
+        display: block;
+        margin-bottom: 1rem;
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius);
+        background-color: var(--color-white);
+    }
+
+    #deviceTable tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--color-border);
+    }
+
+    #deviceTable tbody td:before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-text-muted);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+    }
+
+    #deviceTable tbody td:last-child {
+        border-bottom: none;
+    }
+
+    .task-prompt {
+        max-width: 150px;
+        text-align: right;
+    }
+}
+
+/* Small mobile */
+@media (max-width: 576px) {
+    .btn-group-actions {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .btn-group-actions .btn {
+        width: 100%;
+    }
+}
+
+/* =============================================================================
+   Utility Classes
+   ============================================================================= */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+/* =============================================================================
+   Scrollbar Styling
+   ============================================================================= */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a1a1a1;
+}
+
+/* Dark scrollbar for code blocks */
+.output-content::-webkit-scrollbar-track,
+.command-preview::-webkit-scrollbar-track {
+    background: #2d2d2d;
+}
+
+.output-content::-webkit-scrollbar-thumb,
+.command-preview::-webkit-scrollbar-thumb {
+    background: #555;
+}
+
+.output-content::-webkit-scrollbar-thumb:hover,
+.command-preview::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}

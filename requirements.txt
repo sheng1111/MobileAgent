@@ -1,0 +1,13 @@
+# MobileAgent Python Dependencies
+# Install: pip install -r requirements.txt
+
+# Web UI
+flask>=2.3.0
+
+# Core functionality uses only standard library modules:
+# - subprocess, os, sys, time, base64, datetime, logging
+
+# Optional: Add dependencies here if you extend the project
+# pillow>=9.0.0      # Image processing
+# requests>=2.28.0   # HTTP requests
+# opencv-python>=4.5 # Computer vision

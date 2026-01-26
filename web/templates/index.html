@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MobileAgent - Device Control Panel</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container-fluid">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-mobile-alt header-icon"></i>
+                    <h1 class="header-title">MobileAgent</h1>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted small" id="lastUpdate">--</span>
+                    <button class="btn btn-outline-secondary btn-sm" id="btnRefresh" title="Refresh Devices">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="ms-1 d-none d-sm-inline" data-i18n="refresh">Refresh</span>
+                    </button>
+                    <!-- Language Switcher (rightmost) -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" id="langDropdown"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-globe me-1"></i><span id="currentLangLabel">繁中</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="langDropdown">
+                            <li><a class="dropdown-item" href="#" onclick="setLanguage('zh-TW')">繁體中文</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="setLanguage('en')">English</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container-fluid">
+
+            <!-- Device Table Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-list me-2"></i><span data-i18n="connectedDevices">Connected Devices</span>
+                        </h5>
+                        <span class="badge bg-secondary" id="deviceCount">0</span>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+
+                    <!-- Loading State -->
+                    <div class="text-center py-5" id="loadingState">
+                        <div class="spinner-border text-secondary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="text-muted mt-2" data-i18n="loadingDevices">Loading devices...</p>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="text-center py-5 d-none" id="emptyState">
+                        <i class="fas fa-plug fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted" data-i18n="noDevices">No Devices Connected</h5>
+                        <p class="text-muted small" data-i18n="noDevicesHint">Connect an Android device via USB and
+                            enable USB debugging.</p>
+                        <button class="btn btn-primary btn-sm" onclick="refreshDevices()">
+                            <i class="fas fa-sync-alt me-1"></i><span data-i18n="retry">Retry</span>
+                        </button>
+                    </div>
+
+                    <!-- Device Table -->
+                    <div class="table-responsive d-none" id="deviceTableContainer">
+                        <table class="table table-hover mb-0" id="deviceTable">
+                            <thead>
+                                <tr>
+                                    <th class="col-serial" data-i18n="serial">Serial</th>
+                                    <th class="col-status" data-i18n="status">Status</th>
+                                    <th class="col-model" data-i18n="model">Model</th>
+                                    <th class="col-task" data-i18n="task">Task</th>
+                                    <th class="col-taskstatus" data-i18n="taskStatus">Task Status</th>
+                                    <th class="col-actions" data-i18n="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deviceTableBody">
+                                <!-- Rows inserted by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Task History Card -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-history me-2"></i><span data-i18n="taskHistory">Task History</span>
+                        </h5>
+                        <button class="btn btn-outline-secondary btn-sm" id="btnClearHistory" title="Clear History">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" id="taskHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th data-i18n="device">Device</th>
+                                    <th data-i18n="prompt">Prompt</th>
+                                    <th data-i18n="status">Status</th>
+                                    <th data-i18n="created">Created</th>
+                                    <th data-i18n="actions">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="taskHistoryBody">
+                                <tr id="noTasksRow">
+                                    <td colspan="6" class="text-center text-muted py-4" data-i18n="noTasks">No tasks yet
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- New Task Modal -->
+    <div class="modal fade" id="taskModal" tabindex="-1" aria-labelledby="taskModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="taskModalLabel">
+                        <i class="fas fa-terminal me-2"></i><span data-i18n="newTask">New Task</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="taskForm">
+                        <input type="hidden" id="taskDeviceSerial">
+
+                        <div class="mb-3">
+                            <label for="taskDeviceDisplay" class="form-label" data-i18n="device">Device</label>
+                            <input type="text" class="form-control" id="taskDeviceDisplay" readonly>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label for="taskCliTool" class="form-label" data-i18n="cliTool">CLI Tool</label>
+                                <select class="form-select" id="taskCliTool">
+                                    <option value="gemini">Gemini CLI</option>
+                                    <option value="claude">Claude Code</option>
+                                    <option value="codex">OpenAI Codex</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="taskModel" class="form-label" data-i18n="modelLabel">Model</label>
+                                <select class="form-select" id="taskModel">
+                                    <!-- Options populated by JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="taskPrompt" class="form-label" data-i18n="taskPrompt">Task Prompt</label>
+                            <textarea class="form-control" id="taskPrompt" rows="4"
+                                placeholder="e.g., Open Chrome and search for latest news"></textarea>
+                            <div class="form-text" data-i18n="taskPromptHint">
+                                Describe what you want the agent to do on this device.
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label" data-i18n="commandPreview">Command Preview</label>
+                            <code class="command-preview" id="commandPreview">--</code>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="cancel">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="btnSubmitTask">
+                        <i class="fas fa-play me-1"></i><span data-i18n="execute">Execute</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Task Output Modal -->
+    <div class="modal fade" id="outputModal" tabindex="-1" aria-labelledby="outputModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="outputModalLabel">
+                        <i class="fas fa-terminal me-2"></i><span data-i18n="taskOutput">Task Output</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <span class="badge" id="outputStatusBadge">--</span>
+                        <span class="ms-2 text-muted small" id="outputTaskId">--</span>
+                    </div>
+                    <pre class="output-content" id="outputContent">No output yet</pre>
+                    <!-- Final Answer Display -->
+                    <div class="final-answer-container d-none" id="finalAnswerContainer">
+                        <div class="final-answer-header" id="finalAnswerHeader">
+                            <i class="fas fa-flag-checkered"></i>
+                            <span id="finalAnswerLabel">Final Result</span>
+                        </div>
+                        <div class="final-answer-content" id="finalAnswerContent"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger d-none" id="btnCancelTask">
+                        <i class="fas fa-stop me-1"></i><span data-i18n="cancelTask">Cancel Task</span>
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"
+                        data-i18n="close">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Marked.js for Markdown rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+</body>
+
+</html>
