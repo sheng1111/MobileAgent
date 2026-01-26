@@ -1,19 +1,19 @@
 # MobileAgent Skills
 
-統一的 AI Agent Skills 來源目錄。執行 `./set.sh` 後會自動驗證並部署到偵測到的 AI Agent 對應目錄。
+Unified AI Agent Skills source directory. Running `./set.sh` automatically validates and deploys skills to detected AI Agent directories.
 
-## 支援的 AI Agents
+## Supported AI Agents
 
-| AI Agent | 專案層級路徑 | 偵測方式 |
-|----------|-------------|---------|
-| Cursor | `.cursor/skills/` | `~/.cursor/` 目錄存在 |
-| Claude Code | `.claude/skills/` | `claude` 指令或 `~/.claude/` |
-| Gemini CLI | `.gemini/skills/` | `gemini` 指令或 `~/.gemini/` |
-| Codex CLI | `.codex/skills/` | `codex` 指令或 `~/.codex/` |
-| Windsurf | `.windsurf/skills/` | `~/.codeium/` 目錄存在 |
-| Roo Code | `.roo/skills/` | `~/.roo/` 目錄存在 |
+| AI Agent | Project Path | Detection Method |
+|----------|--------------|------------------|
+| Cursor | `.cursor/skills/` | `~/.cursor/` directory exists |
+| Claude Code | `.claude/skills/` | `claude` command or `~/.claude/` |
+| Gemini CLI | `.gemini/skills/` | `gemini` command or `~/.gemini/` |
+| Codex CLI | `.codex/skills/` | `codex` command or `~/.codex/` |
+| Windsurf | `.windsurf/skills/` | `~/.codeium/` directory exists |
+| Roo Code | `.roo/skills/` | `~/.roo/` directory exists |
 
-## 目錄結構
+## Directory Structure
 
 ```
 .skills/
@@ -24,43 +24,46 @@
 │   └── SKILL.md
 ├── screen-analyze/
 │   └── SKILL.md
+├── social-media/
+│   ├── SKILL.md
+│   └── references/
 ├── troubleshoot/
 │   └── SKILL.md
 └── unicode-setup/
     └── SKILL.md
 ```
 
-## Skill 格式
+## Skill Format
 
-每個 skill 必須包含 `SKILL.md` 檔案，開頭需要 YAML frontmatter：
+Each skill must contain a `SKILL.md` file with YAML frontmatter:
 
 ```markdown
 ---
 name: skill-name
-description: 描述此 skill 的用途以及何時使用。
+description: Describe what this skill does and when to use it.
 ---
 
-# Skill 標題
+# Skill Title
 
-詳細說明...
+Detailed instructions...
 ```
 
-### 必要欄位
+### Required Fields
 
-| 欄位 | 說明 |
-|------|------|
-| `name` | Skill 識別名稱，只能包含小寫字母、數字和連字號 |
-| `description` | 描述功能與觸發時機，Agent 會根據此決定是否啟用 |
+| Field | Description |
+|-------|-------------|
+| `name` | Skill identifier, lowercase letters, numbers, and hyphens only |
+| `description` | Describes functionality and trigger conditions, Agent uses this to decide activation |
 
-## 新增 Skill
+## Adding a Skill
 
-1. 在 `.skills/` 下建立新目錄
-2. 建立 `SKILL.md` 檔案（含 frontmatter）
-3. 執行 `./set.sh` 驗證並部署
+1. Create a new directory under `.skills/`
+2. Create a `SKILL.md` file (with frontmatter)
+3. Run `./set.sh` to validate and deploy
 
-## 附加資源
+## Additional Resources
 
-Skill 可以包含額外目錄存放支援檔案：
+Skills can include extra directories for supporting files:
 
 ```
 .skills/
@@ -72,8 +75,8 @@ Skill 可以包含額外目錄存放支援檔案：
         └── checklist.md
 ```
 
-## 相關文件
+## Related Documentation
 
-- Agent Skills 規範: https://agentskills.io/
-- AGENTS.md - Agent 行為指南
-- CLAUDE.md - 專案概覽
+- Agent Skills Specification: https://agentskills.io/
+- AGENTS.md - Agent behavior guidelines
+- CLAUDE.md - Project overview

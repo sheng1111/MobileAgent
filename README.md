@@ -1,6 +1,6 @@
 # MobileAgent - AI-Powered Mobile Automation Framework
 
-[中文版 README](README_ZH.md)
+[中文版 README](docs/README_ZH.md)
 
 An automation framework for controlling Android devices through AI Agents and MCP (Model Context Protocol).
 
@@ -136,6 +136,18 @@ Open http://localhost:6443 in your browser.
 - Real-time task output streaming
 - Task history
 - English/Traditional Chinese interface
+
+### Screenshots
+
+| Dashboard | New Task |
+|:---------:|:--------:|
+| ![Dashboard](docs/images/webui-dashboard.png) | ![New Task](docs/images/webui-new-task.png) |
+| View connected devices and task history | Select CLI tool, model, and describe your task |
+
+| Task Running | Task Completed |
+|:------------:|:--------------:|
+| ![Running](docs/images/webui-with-device.png) | ![Completed](docs/images/webui-task-completed.png) |
+| Real-time output with device screen | View results and task summary |
 
 ## Usage Example
 
