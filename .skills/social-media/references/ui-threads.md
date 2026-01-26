@@ -12,10 +12,11 @@ Package: `com.instagram.barcelona`
 
 ## Known Quirks
 
-- **Search location**: Top-RIGHT header (magnifying glass), NOT in bottom nav
-- **Bottom nav order**: Home, Messages, Create(+), Activity, Profile
-- **Messages vs Search confusion**: 2nd bottom tab is Messages (envelope), not Search
-- **Search may not appear in accessibility tree**: Use screenshot to locate
+- **CRITICAL - Search is NOT in bottom nav**: Search icon (🔍) is in TOP-RIGHT header area only
+- **Search NOT in accessibility tree**: Use screenshot to visually locate the magnifying glass icon
+- **Search location strategy**: Take screenshot → find 🔍 in header row (same row as Threads logo) → rightmost icon
+- **Bottom nav order**: Home, Messages, Create(+), Activity, Profile - NO SEARCH HERE
+- **Common mistake**: Tapping Messages (2nd bottom tab, envelope icon) when trying to search
 - **Create is center (+)**: Post composer
 
 ## Element Keywords
