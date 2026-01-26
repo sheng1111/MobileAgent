@@ -1,75 +1,36 @@
-# Facebook UI Reference
+# Facebook Reference
 
 Package: `com.facebook.katana` (main), `com.facebook.lite` (lite)
 
-## Navigation
+## App Traits
 
-Bottom tabs:
-```
-[Home] [Video] [Marketplace] [Notifications] [Menu]
-```
+- Social network with news feed
+- 6 reaction types (long-press Like)
+- Stories and Reels
+- Marketplace for buying/selling
+- Groups and Events
+- Messenger integration (separate app)
 
-## Layout
+## Known Quirks
 
-```
-+------------------------------------------+
-|  [Search]                  [Messenger]   |
-+------------------------------------------+
-|  [Story] [+Create]                       |
-+------------------------------------------+
-|  [Avatar] Name              [...]        |
-|  Post content text                       |
-|  +------------------------------------+  |
-|  |         [Media]                    |  |
-|  +------------------------------------+  |
-|  Reactions xxx           xx comments     |
-|  ----------------------------------------|
-|  [Like]  [Comment]  [Share]              |
-+------------------------------------------+
-|  [Home] [Video] [Market] [Notif] [Menu]  |
-+------------------------------------------+
-```
+- **Reactions**: Long-press Like for 6 options (Like, Love, Haha, Wow, Sad, Angry)
+- **Messenger is separate**: `com.facebook.orca` for full DM features
+- **Video tab**: Dedicated section for Watch content
+- **Marketplace**: Local buying/selling
+- **Menu tab**: Access to all features, settings, shortcuts
+- **Share options**: Share Now, Share to Story, Send in Messenger
 
-## Reactions (6 types)
+## Element Keywords
 
-Long-press Like to select:
-1. Like (thumbs up)
-2. Love (heart)
-3. Haha (laughing)
-4. Wow (surprised)
-5. Sad (crying)
-6. Angry (angry face)
-
-## Key Actions
-
-### React to Post
-1. Tap Like for quick like
-2. Long-press Like for reaction menu
-3. Select reaction type
-
-### Comment
-1. Tap Comment button
-2. Find input field
-3. Type and tap Post
-
-### Share
-1. Tap Share button
-2. Select: Share Now, Share to Story, Send in Messenger
-
-### Send Message (Messenger)
-1. Tap Messenger icon (top-right)
-2. Or open Messenger app (`com.facebook.orca`)
-3. Select conversation
-4. Type and send
-
-### Search
-1. Tap search bar at top
-2. Type query
-3. Filter: All, Posts, People, Photos, Videos, Pages, Groups
-
-## contentDescription Keywords
-
-- Like: "Like", "React"
-- Comment: "Comment"
-- Share: "Share"
-- More: "More options"
+| Action | contentDescription patterns |
+|--------|----------------------------|
+| Like | "Like", "React" |
+| Comment | "Comment" |
+| Share | "Share" |
+| More | "More options" |
+| Search | "Search" |
+| Messenger | "Messenger" |
+| Notifications | "Notifications" |
+| Menu | "Menu" |
+| Profile | "Profile" |
+| Home | "Home", "News Feed" |

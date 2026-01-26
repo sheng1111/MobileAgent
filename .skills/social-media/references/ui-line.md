@@ -1,88 +1,35 @@
-# LINE UI Reference
+# LINE Reference
 
 Package: `jp.naver.line.android`
 
-## Navigation
+## App Traits
 
-Bottom tabs:
-```
-[Home] [Chats] [VOOM] [Wallet] [News]
-```
+- Primary messaging app in Japan, Taiwan, Thailand
+- Stickers: Rich expression library (free and paid)
+- VOOM: Social feed (formerly Timeline)
+- LINE Pay for payments
+- Official Accounts for businesses
+- Keep Memo for personal notes
 
-Note: Tab names vary by region/language
+## Known Quirks
 
-## Layout - Main
+- **Tab names vary by region/language**: May see different labels
+- **Sticker culture**: Stickers are primary communication method
+- **Long-press message**: Recall, forward, copy options
+- **Swipe left on chat**: Archive conversation
+- **Notes/Albums**: Available in group chats
+- **Keep**: Personal storage linked to account
 
-```
-+------------------------------------------+
-|  LINE                           [Gear]   |
-+------------------------------------------+
-|  [Search bar]                            |
-+------------------------------------------+
-|  +------------------------------------+  |
-|  |  Chat List                         |  |
-|  |  O Contact 1      Message    Time  |  |
-|  |  O Contact 2      Message    Time  |  |
-|  |  O Group 1        Message    Time  |  |
-|  +------------------------------------+  |
-+------------------------------------------+
-|  [Home] [Chats] [VOOM] [Wallet] [News]   |
-+------------------------------------------+
-```
+## Element Keywords
 
-## Layout - Chat Window
-
-```
-+------------------------------------------+
-|  [<] Contact Name          [Call] [Menu] |
-+------------------------------------------+
-|                                          |
-|  [Messages]                              |
-|                                          |
-+------------------------------------------+
-|  [+] [Cam] [____Input____] [Sticker] [Mic]|
-+------------------------------------------+
-```
-
-## Key Actions
-
-### Send Message
-1. Tap Chats tab
-2. Select conversation (or search)
-3. Tap input field
-4. Type message
-5. Tap send (or press Enter)
-
-### Send Sticker
-1. In chat, tap sticker icon
-2. Select sticker
-3. Tap to send
-
-### Voice/Video Call
-1. Open chat
-2. Tap phone icon (top-right)
-3. Select voice or video
-
-### Add Friend
-1. Go to Home tab
-2. Tap Add Friend icon
-3. Search by ID, QR, or phone
-
-### VOOM (Timeline)
-1. Tap VOOM tab
-2. Like: tap heart
-3. Comment: tap bubble
-
-## Special Features
-
-- Long-press message: recall, forward, copy
-- Swipe left on chat: archive
-- Notes/Albums in group chats
-- Keep memo for self-notes
-
-## contentDescription Keywords
-
-- Send: "Send", "sousin"
-- Sticker: "Sticker", "sutanpu"
-- Call: "Call", "denwa"
-- Video: "Video call"
+| Action | contentDescription patterns |
+|--------|----------------------------|
+| Send | "Send", "sousin", "送信" |
+| Sticker | "Sticker", "sutanpu", "スタンプ" |
+| Call | "Call", "denwa", "電話" |
+| Video | "Video call" |
+| Home | "Home", "ホーム" |
+| Chat | "Chat", "トーク" |
+| VOOM | "VOOM", "Timeline" |
+| Search | "Search", "検索" |
+| Add | "Add friend", "友だち追加" |
