@@ -18,20 +18,51 @@ Unified AI Agent Skills source directory. Running `./set.sh` automatically valid
 ```
 .skills/
 ├── README.md
-├── app-action/
-│   └── SKILL.md
-├── device-check/
-│   └── SKILL.md
-├── screen-analyze/
-│   └── SKILL.md
-├── social-media/
+├── app-explore/          # Main skill: app operations + research mindset
 │   ├── SKILL.md
-│   └── references/
-├── troubleshoot/
+│   └── references/       # App-specific UI patterns
+│       ├── package-names.md
+│       └── ui-*.md
+├── app-action/           # Quick single-step operations
 │   └── SKILL.md
-└── unicode-setup/
+├── device-check/         # Device connection verification
+│   └── SKILL.md
+├── screen-analyze/       # Screen state analysis
+│   └── SKILL.md
+├── troubleshoot/         # Diagnostics and fixes
+│   └── SKILL.md
+└── unicode-setup/        # Unicode input configuration
     └── SKILL.md
 ```
+
+## Skill Overview
+
+| Skill | Purpose | When to Use |
+|-------|---------|-------------|
+| **app-explore** | App operations with research mindset | Research, browse, multi-step tasks |
+| **app-action** | Quick single-step operations | Launch, tap, type, simple tasks |
+| **device-check** | Verify device connection | Before automation, connection issues |
+| **screen-analyze** | Analyze current screen | Find elements, understand UI state |
+| **troubleshoot** | Fix common issues | Errors, failures, debugging |
+| **unicode-setup** | Configure text input | Non-ASCII text needed |
+
+## Core Strategy: Element-First
+
+**All skills follow the Element-First strategy for speed and accuracy.**
+
+```
+FAST & RELIABLE:
+1. mobile_list_elements_on_screen (accessibility tree)
+2. Find target by text/type/identifier
+3. Click at element center
+
+SLOW & ERROR-PRONE (avoid):
+1. mobile_take_screenshot
+2. LLM guesses coordinates from image
+3. Frequent misclicks → retry loop
+```
+
+See `AGENTS.md` for detailed guidelines.
 
 ## Skill Format
 
@@ -67,12 +98,12 @@ Skills can include extra directories for supporting files:
 
 ```
 .skills/
-└── deploy-workflow/
+└── my-skill/
     ├── SKILL.md
     ├── scripts/
-    │   └── deploy.sh
+    │   └── helper.py
     └── references/
-        └── checklist.md
+        └── data.md
 ```
 
 ## Related Documentation

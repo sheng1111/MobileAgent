@@ -382,6 +382,27 @@ textarea.form-control {
     margin: 0;
 }
 
+/* Output text coloring */
+.output-content .output-error {
+    color: #f87171;
+}
+
+.output-content .output-warning {
+    color: #fbbf24;
+}
+
+.output-content .output-success {
+    color: #4ade80;
+}
+
+.output-content .output-info {
+    color: #60a5fa;
+}
+
+.output-content .output-system {
+    color: #a78bfa;
+}
+
 /* =============================================================================
    Final Answer Display
    ============================================================================= */

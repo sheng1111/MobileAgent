@@ -768,6 +768,59 @@ function updateFinalAnswerDisplay(taskStatus, output) {
 }
 
 /**
+ * Colorize output text based on content patterns.
+ * Returns HTML string with colored spans.
+ */
+function colorizeOutput(text) {
+    if (!text) return '';
+
+    // Escape HTML first
+    const escaped = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Split into lines and process each
+    const lines = escaped.split('\n');
+    const colorizedLines = lines.map(line => {
+        // Error patterns (red)
+        if (/^Error|Error:|error:|ERROR|failed:|Failed:|FAILED|Exception|exception|Traceback/i.test(line) ||
+            /Error executing tool/i.test(line) ||
+            /Attempt \d+ failed/i.test(line)) {
+            return `<span class="output-error">${line}</span>`;
+        }
+
+        // Warning patterns (yellow)
+        if (/^Warning|Warning:|warning:|WARN|Retrying/i.test(line) ||
+            /quota will reset/i.test(line)) {
+            return `<span class="output-warning">${line}</span>`;
+        }
+
+        // Success patterns (green)
+        if (/^Success|success:|✓|✔|completed|Done|DONE/i.test(line) ||
+            /successfully/i.test(line)) {
+            return `<span class="output-success">${line}</span>`;
+        }
+
+        // System info patterns (purple) - typically at start
+        if (/^(Model:|Device:|Tool:|Starting|Initializing|Loading|Connected)/i.test(line) ||
+            /^(Using|Version:|Config:|Session|Agent)/i.test(line) ||
+            /^\[.*\]$/.test(line)) {
+            return `<span class="output-system">${line}</span>`;
+        }
+
+        // Info patterns (blue)
+        if (/^Info:|INFO|Note:|→|➤|►/i.test(line)) {
+            return `<span class="output-info">${line}</span>`;
+        }
+
+        return line;
+    });
+
+    return colorizedLines.join('\n');
+}
+
+/**
  * Strip FINAL_ANSWER tags from output for cleaner display.
  * The tags are still parsed separately for the Final Answer container.
  */
@@ -816,7 +869,9 @@ async function pollTaskOutput() {
     if (data.error) {
         displayOutput += `\n\nError: ${data.error}`;
     }
-    document.getElementById('outputContent').textContent = displayOutput;
+
+    // Use colorized HTML output
+    document.getElementById('outputContent').innerHTML = colorizeOutput(displayOutput);
 
     // Scroll to bottom of output
     const outputEl = document.getElementById('outputContent');

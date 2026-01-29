@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Project documentation for Claude Code (Cursor, VS Code).
 
 ## Project Overview
 
@@ -29,29 +29,44 @@ apk_tools/           # DeviceKit (MCP), ADBKeyboard (Python) APKs
 outputs/             # User-requested outputs only
 mcp/                 # MCP server configs
 web/                 # Web UI for device management
+.skills/             # Agent skills for specific tasks
 ```
-
-## Web UI
-
-Features:
-- View connected devices
-- Create and monitor agent tasks
-- Real-time task output streaming
-- Task history
-
-**Agent behavior is defined in AGENTS.md** - read it for cognitive loop, decision principles, and adaptive strategies.
 
 ## Tool Selection
 
-Prefer MCP tools for device interaction. Use Python (`src/adb_helper.py`) as fallback or for features MCP lacks.
+Prefer MCP tools for device interaction. Use Python (`src/adb_helper.py`) as fallback.
 
-| Task | Tool |
-|------|------|
-| Get UI elements/coordinates | `mobile_list_elements_on_screen` (MCP) |
-| Visual screen state | `mobile_take_screenshot` (MCP) |
-| Unicode text input | MCP: `mobile_type_keys` + DeviceKit |
-| Unicode text (fallback) | Python: `adb.type_text()` + ADBKeyboard |
-| File transfer, device info, list packages | Python only |
+### Element-First Strategy (CRITICAL)
+
+**ALWAYS use accessibility tree before screenshots:**
+
+```
+CORRECT: list_elements → find by text/id → click center
+WRONG:   screenshot → guess coordinates → click
+```
+
+### Tool Priority
+
+| Priority | Task | Tool |
+|----------|------|------|
+| 1 | Get UI elements/coordinates | `mobile_list_elements_on_screen` (MCP) |
+| 2 | Click/tap elements | `mobile_click_on_screen_at_coordinates` (MCP) |
+| 3 | Visual verification | `mobile_take_screenshot` (MCP) - LAST resort |
+| 4 | Unicode text input | MCP: `mobile_type_keys` + DeviceKit |
+| 5 | Unicode text (fallback) | Python: `adb.type_text()` + ADBKeyboard |
+| 6 | File transfer, device info | Python only |
+
+### Why Element-First
+
+- **Speed**: Element list ~100ms vs screenshot+vision 2-5s
+- **Accuracy**: Element bounds are pixel-perfect
+- **Reliability**: resourceId/identifier stable across runs
+
+## MCP Tool Notes
+
+```
+mobile_list_available_devices requires: { "noParams": {} }
+```
 
 ## Python API
 
@@ -65,8 +80,6 @@ adb.screenshot(prefix="step1")
 
 # All methods return (success, message) tuple
 ok, msg = adb.tap(540, 1200)
-if not ok:
-    # Handle failure
 ```
 
 ## Code Style
@@ -80,11 +93,18 @@ if not ok:
 
 - Code/comments: English
 - User-facing: Match user's language
-- Files: Only save when user explicitly requests ("save", "download", "record")
-- Format: `outputs/YYYY-MM-DD/{task}_{HHMMSS}_step{N}.png`
+- Files: Only when explicitly requested → `outputs/YYYY-MM-DD/`
+
+## Agent Behavior
+
+**For device operation tasks, follow AGENTS.md** - contains:
+- Research mindset and minimum actions
+- Cognitive loop (Observe → Decide → Act → Verify → Adapt)
+- Decision principles and obstacle handling
+- Content extraction and output format
 
 ## See Also
 
-- `AGENTS.md` - Agent behavior guidelines, cognitive loop, decision principles
+- `AGENTS.md` - Agent behavioral guidelines (MUST READ for device tasks)
+- `.skills/` - Task-specific skills
 - `README.md` - Full project documentation
-- `web/README.md` - Web UI documentation and API reference

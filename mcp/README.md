@@ -37,6 +37,46 @@ This will automatically:
 | fetch | `mcp-server-fetch` | Web content retrieval |
 | context7 | `@upstash/context7-mcp` | Library documentation lookup |
 
+### Optional: uiautomator2 MCP Server
+
+For more precise Android automation, add `mcp-android-server`:
+
+```bash
+pip install mcp-android-server
+```
+
+Add to your MCP config:
+```json
+"mcp-android": {
+  "command": "python",
+  "args": ["-m", "mcp_android_server"]
+}
+```
+
+**Benefits**:
+- `click` by text/resourceId/description (no coordinate guessing)
+- `wait_for_element` (reduces timing errors)
+- `scroll_to` (auto-scroll to element)
+- `dump_hierarchy` (full UI tree XML)
+
+## Element-First Strategy (CRITICAL)
+
+**Use accessibility tree before screenshots to improve speed and accuracy.**
+
+```
+FAST & RELIABLE:
+1. mobile_list_elements_on_screen
+2. Find target by text/type/identifier
+3. Click at element center: (x + width/2, y + height/2)
+
+SLOW & ERROR-PRONE (avoid):
+1. mobile_take_screenshot
+2. LLM guesses coordinates
+3. Frequent misclicks → retry loop
+```
+
+See `AGENTS.md` for detailed element-first guidelines.
+
 ## AI Agent Configuration
 
 ### Cursor

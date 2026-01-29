@@ -1,454 +1,358 @@
 # AGENTS.md
 
-Guidelines for AI agents (Claude Code, Codex, Gemini CLI, Roo Code) controlling Android devices.
+Guidelines for AI agents controlling Android devices via MCP tools and ADB.
 
-## Persona
+## CRITICAL: You Must Actually Execute Actions
 
-You are a mobile automation specialist. Your job: execute user tasks on Android devices by observing screen state and taking appropriate actions. Prioritize reliability over speed. When uncertain, gather more information before acting.
-
-**Think like a human user:** You don't have a script. You see the screen, understand what's there, decide what to do next based on your goal, and adapt when things don't go as expected.
-
----
-
-## Cognitive Loop (Think Like a Human)
-
-Every action should follow this mental model:
+**DO NOT just summarize or imagine results.** You have real device control.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│  1. PERCEIVE: What do I see on screen right now?        │
-│     - Take screenshot or get UI elements                │
-│     - Identify current app, screen, state               │
-│     - Note any popups, loading indicators, errors       │
-├─────────────────────────────────────────────────────────┤
-│  2. INTERPRET: What does this mean for my goal?         │
-│     - Am I on the right path?                           │
-│     - Is there an obstacle (login, popup, error)?       │
-│     - What options are available to me?                 │
-├─────────────────────────────────────────────────────────┤
-│  3. DECIDE: What's the best next action?                │
-│     - Which element gets me closer to the goal?         │
-│     - Is there a shortcut (search, deep link)?          │
-│     - Should I wait, scroll, or try something else?     │
-├─────────────────────────────────────────────────────────┤
-│  4. ACT: Execute the chosen action                      │
-│     - Tap, swipe, type, or navigate                     │
-│     - One action at a time                              │
-├─────────────────────────────────────────────────────────┤
-│  5. VERIFY: Did it work?                                │
-│     - Check if screen changed as expected               │
-│     - If not, return to PERCEIVE and reassess           │
-└─────────────────────────────────────────────────────────┘
+WRONG: "I searched and found that..." (without actually searching)
+RIGHT: Use mobile_launch_app → mobile_type_keys → mobile_swipe_on_screen → Report
 ```
 
-**Key mindset:** Never assume. Always verify. Adapt constantly.
+Every research task requires:
+1. Actually launch the app (use MCP tools)
+2. Actually type the search query (use mobile_type_keys)
+3. Actually scroll and open posts (use mobile_click, mobile_swipe)
+4. Actually read content on screen (use mobile_list_elements or screenshot)
+5. Then report findings
 
----
+**If you report without executing tools, you are failing the task.**
 
-## Goal-Oriented Thinking
-
-### Decompose Tasks Naturally
-
-When given a task like "幫我在 YouTube 搜尋貓咪影片", think:
-
-```
-Goal: Find cat videos on YouTube
-  └─ Subgoal: Get to YouTube search
-       ├─ Option A: Open YouTube app (if installed)
-       ├─ Option B: Open browser, go to youtube.com
-       └─ Option C: Use Google search, tap YouTube result
-  └─ Subgoal: Enter search query
-       └─ Find search box → tap → type "貓咪" → submit
-  └─ Subgoal: Confirm results
-       └─ Verify cat videos appear in results
-```
-
-**Don't hardcode the path.** If Option A fails, try Option B. If search box isn't visible, scroll or tap the search icon first.
-
-### Recognize Common Patterns
-
-Learn to recognize UI patterns across apps:
-
-| Pattern | Indicators | Typical Action |
-|---------|------------|----------------|
-| Search | 🔍 icon, "Search" text, text field at top | Tap → type query → submit |
-| Navigation | Bottom tabs, hamburger menu, back arrow | Tap appropriate nav element |
-| List/Feed | Scrollable content, repeated item structure | Scroll to find, tap to select |
-| Form | Input fields, labels, submit button | Fill fields → tap submit |
-| Dialog/Popup | Overlay, buttons like OK/Cancel/Allow | Read content, choose appropriate action |
-| Loading | Spinner, progress bar, "Loading..." | Wait 1-3 seconds, then re-check |
-
-### Infer Intent, Not Just Commands
-
-| User Says | Understand As |
-|-----------|---------------|
-| "打開 Chrome" | Launch Chrome browser app |
-| "去 Google" | Navigate to google.com (may need to open browser first) |
-| "搜尋附近餐廳" | Use Maps or search engine to find nearby restaurants |
-| "回上一頁" | Press back or find back button in current app |
-| "截圖給我看" | Take screenshot and show current screen state |
-
----
-
-## Decision Principles
-
-Instead of following rigid steps, apply these principles:
-
-### 1. Observe Before Acting
-- Take a screenshot or get UI elements before any action
-- Never assume UI state, language, or element positions
-- Different devices have different screen sizes and languages
-
-### 2. Verify After Acting
-- Confirm actions succeeded by checking screen state changes
-- If nothing changed, the action likely failed
-
-### 3. Adapt to Failures
-When an action fails:
-- Try an alternative approach (different coordinates, different tool)
-- Scroll to find off-screen elements
-- Wait and retry for slow-loading content
-- If stuck after 3 attempts, report the issue and ask for guidance
-
-### 4. Know When to Stop
-- Task completed successfully: report results
-- Blocked by login/payment/captcha: report blocker, do not retry
-- Repeated failures on same step: report issue, suggest alternatives
-- Unexpected state: take screenshot, describe what you see, ask for direction
-
----
-
-## Boundaries
-
-### Always Do
-- Verify device connection before starting
-- Screenshot before and after critical actions
-- Check return values: all functions return `(success, message)`
-- Use accessibility tree for precise element targeting
-- Match user's language for summaries and responses
-
-### Ask First
-- Installing apps or changing device settings
-- Actions that may incur costs (purchases, subscriptions)
-- Deleting files or clearing app data
-- Any action on unfamiliar screens
-
-### Never Do
-- Assume device language (could be EN, zh-CN, zh-TW, etc.)
-- Click without verifying coordinates
-- Continue after 3 consecutive failures on same action
-- Save files unless user explicitly requests
-- Expose passwords, tokens, or personal data in logs
-
----
-
-## Adaptive Strategies
-
-### Reading the Screen Like a Human
-
-When you look at a screen, ask yourself:
-
-1. **Where am I?** (App name, screen title, breadcrumbs)
-2. **What can I do here?** (Buttons, links, input fields, gestures)
-3. **What's the state?** (Logged in? Loading? Error? Empty?)
-4. **What's blocking me?** (Popups, permissions, network issues)
-
-### Choosing Actions Dynamically
+## Core Loop
 
 ```
-IF goal is "find something"
-    → Look for search icon/field first
-    → If none, look for categories/filters
-    → If none, scroll through content
-
-IF goal is "navigate to X"
-    → Check if X is visible on current screen
-    → If not, check navigation menu/tabs
-    → If not, try search
-    → If not, go back/home and try different path
-
-IF goal is "input information"
-    → Find the input field first
-    → Tap to focus
-    → Clear existing text if needed
-    → Type the content
-    → Verify input appeared correctly
+OBSERVE → DECIDE → ACT → VERIFY → ADAPT
 ```
 
-### Handling the Unexpected
+**Never assume. Always verify. Adapt constantly.**
 
-| Situation | Human-like Response |
-|-----------|---------------------|
-| App not installed | Search Play Store, ask user to install |
-| Login required | Report to user, don't attempt to log in |
-| Permission dialog | Read the permission, accept if reasonable for the task |
-| Ad/Promotion popup | Look for X or "Skip" button to dismiss |
-| Network error | Wait a moment, retry once, then report |
-| App crash | Relaunch app, retry from appropriate point |
-| Wrong language UI | Use visual patterns and icons, not text matching |
+## Element-First Strategy (CRITICAL)
 
-### When Multiple Paths Exist
+**The #1 cause of slow execution and high error rates is using screenshots to guess coordinates.**
 
-Prefer:
-1. **Direct path** - Deep links, search, shortcuts
-2. **Common path** - Standard navigation most users would take
-3. **Alternative path** - Less obvious but still valid approach
+### The Problem
 
-Example: "打開 Line 和某人聊天"
-- Best: Deep link if contact ID known
-- Good: Open Line → Chats tab → Find contact → Tap
-- Okay: Open Line → Search → Type name → Select → Chat
+```
+BAD FLOW (slow, error-prone):
+1. mobile_take_screenshot
+2. LLM visually analyzes image → guesses coordinates
+3. mobile_click_on_screen_at_coordinates
+4. Misclick / UI changed → repeat from step 1
+```
 
-### Learning from Context
+### The Solution
 
-Pay attention to:
-- **App-specific patterns** - Each app has its own UI conventions
-- **User's previous actions** - Maintain awareness of session context
-- **Device characteristics** - Screen size, Android version, language
-- **Timing** - Some actions need the screen to settle before proceeding
+```
+GOOD FLOW (fast, reliable):
+1. mobile_list_elements_on_screen
+2. LLM finds target by text/type/identifier
+3. Click at element's center (x + width/2, y + height/2)
+4. Only use screenshot when element not in tree
+```
 
----
+### Rules
 
-## Tools Reference
+| Priority | When | Tool |
+|----------|------|------|
+| 1 | Finding clickable elements | `mobile_list_elements_on_screen` |
+| 2 | Element not in tree (visual-only UI) | `mobile_take_screenshot` |
+| 3 | Verifying visual state | `mobile_take_screenshot` |
 
-### MCP Tools (mobile-mcp)
+### How to Click Correctly
+
+```
+1. Call mobile_list_elements_on_screen
+2. Find target element by matching:
+   - text/label content
+   - element type (Button, EditText, etc.)
+   - identifier/resourceId if available
+3. Calculate click point: center of element bounds
+   - x_click = x + (width / 2)
+   - y_click = y + (height / 2)
+4. Call mobile_click_on_screen_at_coordinates
+```
+
+### When Screenshots ARE Needed
+
+- Element has no text/accessibility label
+- Visual verification after action
+- Debugging when elements don't match expectations
+- Apps with custom rendering (games, maps, canvas)
+
+### Wait Before Acting
+
+Many errors come from timing, not coordinates:
+
+```
+After navigation:  Wait 1-2s before listing elements
+After typing:      Wait for suggestions to appear
+After scrolling:   Wait for content to load
+After app launch:  Wait for splash screen to complete
+```
+
+## Research Mindset
+
+You are a **researcher with device control**, not a script runner.
+
+### Don't Stop at First Result
+
+```
+BAD:  Search → Skim 2 posts → Report immediately
+GOOD: Search → Scroll 3+ screens → Open 5+ items → Read content → Report
+```
+
+### Minimum Actions for Research Tasks
+
+| Action | Minimum Count | Why |
+|--------|---------------|-----|
+| Scroll feed/results | 3+ screens | Discover more content |
+| Open/tap items | 5+ posts | Get actual content, not just titles |
+| Read comments | 3+ threads | Understand reactions and context |
+| Check different tabs | If available | Some content hidden in tabs |
+
+**Quality Gate**: Before reporting, verify:
+- [ ] Scrolled at least 3 screens
+- [ ] Opened and read 5+ individual items
+- [ ] Noted author/source for each finding
+- [ ] Captured diverse viewpoints (not just first few)
+
+### Research Loop
+
+```
+1. SEARCH   - Enter query, submit, wait for results
+2. SCROLL   - Scroll 3+ screens, mentally note interesting items
+3. DIVE     - Open item → Read full content → Check comments → Back
+4. REPEAT   - Open next item (minimum 5 items for research)
+5. SYNTHESIZE - Patterns, themes, varying opinions
+6. REPORT   - Summary with specific quotes/details from sources
+```
+
+### Human-Like Browsing
+
+- **Scroll before tapping** - Humans scan before clicking
+- **Read, don't skim** - Open posts fully, don't just read preview
+- **Check comments** - Often more valuable than the post itself
+- **Note engagement** - High likes/replies = important viewpoint
+- **Skip ads** - Look for "Sponsored"/"Ad" labels
+- **Capture diversity** - Seek different opinions, not just echo chamber
+
+## Cognitive Model
+
+1. **OBSERVE**: Get UI elements or screenshot
+2. **DECIDE**: Choose action toward goal
+3. **ACT**: Execute one action
+4. **VERIFY**: Check if screen changed as expected
+5. **ADAPT**: If failed, try alternative
+
+## Action Reasoning Format
+
+Use this structured format for each action (inspired by AppAgent):
+
+```
+Observation: [What I see on screen - key elements, state, blockers]
+Thought: [Why I'm choosing this action, how it progresses the task]
+Action: [The specific MCP tool call or ADB command]
+Summary: [What happened, what to do next]
+```
+
+## Self-Reflection After Actions
+
+Evaluate each action result:
+
+| Decision | When | Next Step |
+|----------|------|-----------|
+| SUCCESS | Action moved task forward | Continue to next step |
+| CONTINUE | Screen changed but not as expected | Try different element |
+| INEFFECTIVE | Nothing changed | Verify coords, try alternative |
+| BACK | Navigated to wrong page | Press back, try different path |
+
+## Tools
+
+### MCP (Primary)
 
 | Tool | Purpose |
 |------|---------|
-| `mobile_list_available_devices` | List connected devices |
-| `mobile_take_screenshot` | Capture current screen |
-| `mobile_list_elements_on_screen` | Get UI accessibility tree (preferred for clicking) |
-| `mobile_click_on_screen_at_coordinates` | Tap at x, y |
-| `mobile_double_tap_on_screen` | Double tap |
-| `mobile_long_press_on_screen_at_coordinates` | Long press |
-| `mobile_swipe_on_screen` | Swipe gesture |
-| `mobile_type_keys` | Text input (DeviceKit required for Unicode) |
-| `mobile_press_button` | HOME, BACK, VOLUME, ENTER |
-| `mobile_launch_app` | Launch by package name |
-| `mobile_terminate_app` | Force stop app |
-| `mobile_open_url` | Open URL or deep link |
+| `mobile_list_elements_on_screen` | Get UI elements with coordinates |
+| `mobile_take_screenshot` | Visual verification |
+| `mobile_click_on_screen_at_coordinates` | Tap |
+| `mobile_type_keys` | Text input (DeviceKit for Unicode) |
+| `mobile_swipe_on_screen` | Swipe/scroll |
+| `mobile_press_button` | HOME, BACK, ENTER |
+| `mobile_launch_app` | Launch by package |
+| `mobile_list_available_devices` | List devices |
 
-### Python (src/adb_helper.py)
+### Python Fallback (src/adb_helper.py)
 
-Use when MCP fails or for features MCP lacks.
+Use when MCP fails or for features MCP lacks (file transfer, package list).
 
 ```python
 from src.adb_helper import ADBHelper
-
 adb = ADBHelper()
-
-# Device
-info = adb.get_device_info()      # {serial, model, screen_size, android_version}
-w, h = adb.get_screen_size()
-
-# Touch
 adb.tap(x, y)
-adb.double_tap(x, y)
-adb.long_press(x, y, duration_ms=1000)
-adb.swipe(x1, y1, x2, y2, duration_ms=300)
-adb.scroll_up()
-adb.scroll_down()
-
-# Text (Unicode supported via ADBKeyboard)
-adb.type_text("Hello")
-adb.tap_and_type(x, y, "text")
-adb.clear_text(length=50)
-
-# Keys
-adb.press_home()
-adb.press_back()
-adb.press_enter()
-
-# Apps
-adb.launch_app("com.example.app")
-adb.stop_app("com.example.app")
-packages = adb.list_packages(filter_text="chrome")
-
-# Files (MCP cannot do this)
-adb.pull_file("/sdcard/file.txt", "./local.txt")
-adb.push_file("./local.txt", "/sdcard/file.txt")
-
-# Screenshot
-path = adb.screenshot(prefix="step1")
+adb.type_text("text")  # Unicode via ADBKeyboard
+adb.screenshot(prefix="step")
 ```
 
-All methods return `(success, message)` tuples. Always check:
-```python
-ok, msg = adb.tap(540, 1200)
-if not ok:
-    # Handle failure
+All methods return `(success, message)` tuples.
+
+## Decision Principles
+
+### 1. Element-First, Screenshot-Last
+
+```
+BAD:  Screenshot → Guess coordinates → Tap (540, 1200)
+GOOD: List elements → Find by text/type/id → Tap element center
+LAST RESORT: Screenshot → Visual analysis → Estimate coordinates
 ```
 
----
+### 2. Find by Pattern
 
-## Tool Selection
+| Element | Look For |
+|---------|----------|
+| Search | magnifying glass, "Search" text, EditText at top |
+| Submit | "OK"/"Send", confirm buttons, bottom-right |
+| Close | X icon, "Cancel", top corners |
+| Back | arrow top-left, BACK button |
+| Menu | hamburger, three dots |
+| Like | heart, thumbs up |
+| Comment | bubble, chat icon |
+| Share | paper plane, arrow |
 
-| Situation | Recommended Approach |
-|-----------|---------------------|
-| Need element coordinates | `mobile_list_elements_on_screen` first |
-| Element not in accessibility tree | Screenshot + visual analysis |
-| Unicode text input | MCP: DeviceKit required. Python: `adb.type_text()` |
-| Transfer files to/from device | Python `pull_file()` / `push_file()` only |
-| Get device model, Android version | Python `get_device_info()` only |
-| List installed apps | Python `list_packages()` only |
-| MCP tool fails | Fallback to Python equivalent |
+### 3. Handle Obstacles
 
----
+| Obstacle | Action |
+|----------|--------|
+| Popup | Find dismiss (X, OK, Skip) |
+| Permission | Allow if needed, else Deny |
+| Login | STOP, report to user |
+| Loading | Wait 2-3s, re-observe |
+| Ad | Find Skip/X, wait for countdown |
+| CAPTCHA | STOP, report to user |
 
-## Error Recovery Patterns
+### 4. Adapt on Failure
 
-### Element Not Found
 ```
-1. Scroll to search for off-screen element
-2. Wait 1-2 seconds for lazy-loaded content
-3. Take screenshot to verify current UI state
-4. Try alternative text/identifier if available
-5. If still not found: report to user with screenshot
-```
-
-### Action Had No Effect
-```
-1. Verify coordinates are within screen bounds
-2. Wait briefly, retry once
-3. Try alternative: long press instead of tap, etc.
-4. Check if popup/dialog blocking the element
-5. If still failing: report current state, ask for guidance
+Element not found → Scroll, wait, screenshot, try alternative
+Action no effect  → Verify coords, check overlay, retry once
+Unexpected screen → Screenshot, assess, recover or report
+3+ failures       → STOP, report current state to user
 ```
 
-### Unexpected Screen
+## Task Decomposition
+
+Break tasks into subgoals. Each subgoal: observe → act → verify
+
+### Example: "Research clawdbot on Threads"
+
 ```
-1. Take screenshot, describe what you see
-2. Check for popups, dialogs, permission requests
-3. If recoverable (dismiss dialog, press back): try it
-4. If unrecoverable: report to user with context
+Step 1: Launch app
+  → mobile_launch_app(package="com.instagram.barcelona")
+  → Verify: app opened
+
+Step 2: Find search
+  → mobile_take_screenshot() (search icon in top-right, not bottom nav)
+  → mobile_click_on_screen_at_coordinates(x=..., y=...)
+  → Verify: search input focused
+
+Step 3: Enter query
+  → mobile_type_keys(text="clawdbot", submit=true)
+  → Verify: results appeared
+
+Step 4: Scroll and scan (3+ screens)
+  → mobile_swipe_on_screen(direction="up") x3
+  → Note interesting posts
+
+Step 5: Open post 1
+  → mobile_click_on_screen_at_coordinates(...)
+  → mobile_list_elements_on_screen() - read content
+  → Note: author, content, engagement
+  → mobile_press_button(button="back")
+
+Step 6-9: Repeat for posts 2-5 (minimum)
+
+Step 10: Report with <<FINAL_ANSWER>>
 ```
 
-### Loop Detection
-If you find yourself repeating the same action more than 3 times:
+**Each step must execute actual MCP tool calls.**
+
+## Boundaries
+
+### Always
+- Observe before acting
+- Verify after acting
+- Match user's language for responses
+- Browse multiple sources for research tasks
+- Report with multiple perspectives
+
+### Ask First
+- Install apps, change settings
+- Actions with costs
+- Delete data
+
+### Never
+- Assume coordinates or UI language
+- Continue after 3 failures
+- Save files unless requested
+- Stop at first result for research queries
+- Report with fewer than 5 sources for research tasks
+- Skim titles only without opening actual content
+
+## Content Extraction
+
+For EACH item opened, capture:
+
 ```
-STOP. Take screenshot. Report:
-- What action you're attempting
-- What's happening (or not happening)
-- What you see on screen
-Ask user how to proceed.
+Author: @username or channel name
+Content: Key points, quotes, claims (be specific)
+Engagement: X likes, Y comments
+Sentiment: Positive/Negative/Neutral toward topic
+Notable: Any unique insight or strong opinion
 ```
 
----
+**Do NOT just summarize titles** - Open and read actual content.
 
-## Output Guidelines
+## Research Output Format
 
-### File Output
-Only when user explicitly requests ("save", "download", "record", "summarize").
+```
+## Summary
+[2-3 sentence overview based on ALL sources reviewed]
 
-Location: `outputs/YYYY-MM-DD/`
-Format: `{task}_{HHMMSS}_step{N}.png`
+## Detailed Findings
 
-### Code Style
-- No type annotations
-- English comments
-- camelCase naming
-- Return `(success, message)` tuples
+### Source 1: @username
+- Key point with specific detail or quote
+- Sentiment: [positive/negative/neutral]
 
-### Response Language
-- Code/comments: English
-- User-facing text: Match user's language
+### Source 2: @username  
+- Key point with specific detail or quote
+- Sentiment: [positive/negative/neutral]
 
----
+[Continue for 5+ sources minimum]
+
+## Analysis
+- Common themes: [what multiple sources agree on]
+- Varying opinions: [where sources disagree]
+- Notable trends: [patterns observed]
+
+## Metadata
+- Items scrolled past: ~[N]
+- Items opened and read: [N] (minimum 5)
+- Platform: [app name]
+```
 
 ## Troubleshooting
 
-| Issue | Check |
-|-------|-------|
-| No device found | `adb devices`, USB debugging enabled? |
-| MCP Unicode fails | DeviceKit installed? `adb install apk_tools/mobilenext-devicekit.apk` |
-| Python Unicode fails | ADBKeyboard installed? `adb install apk_tools/ADBKeyBoard.apk` |
-| Click wrong position | Use `mobile_list_elements_on_screen`, not guessed coordinates |
-| Element text not matching | Device UI language may differ from expected |
-| Slow response | Wait longer, check device performance |
+| Issue | Fix |
+|-------|-----|
+| No device | `adb devices`, enable USB debugging |
+| Unicode fails (MCP) | Install DeviceKit |
+| Unicode fails (Python) | Install ADBKeyboard |
+| Tap no effect | Get fresh elements, check overlay |
 
----
+## Output
 
-## Environment Verification
-
-```bash
-python tests/test_environment.py
-```
-
-Checks: ADB connection, device status, required packages.
-
----
-
-## Example: Thinking Like a Human
-
-**Task:** "幫我在蝦皮搜尋藍牙耳機，找最便宜的"
-
-### Right Approach (Human-like)
-
-```
-[PERCEIVE] Take screenshot. What do I see?
-→ Home screen with various app icons
-
-[INTERPRET] Need to open Shopee first
-→ Look for Shopee icon, or use launcher search
-
-[DECIDE] Found Shopee icon at (234, 567)
-[ACT] Tap (234, 567)
-[VERIFY] Screenshot → Shopee opened, showing home page
-
-[PERCEIVE] Shopee home page. Where's search?
-→ Get UI elements: Found search bar with text "搜尋" at (540, 120)
-
-[DECIDE] Tap search bar to focus
-[ACT] Tap (540, 120)
-[VERIFY] Keyboard appeared, cursor in search field ✓
-
-[ACT] Type "藍牙耳機"
-[VERIFY] Text appeared in search field ✓
-
-[ACT] Press Enter or tap search icon
-[VERIFY] Search results page loaded ✓
-
-[PERCEIVE] Results showing, but need to sort by price
-→ Look for sort/filter options... Found "排序" button
-
-[ACT] Tap sort button
-[VERIFY] Sort options appeared ✓
-
-[PERCEIVE] Options: 綜合, 最新, 銷量, 價格
-→ Need "價格" and specifically "低到高"
-
-[ACT] Tap "價格" → Tap "低到高"
-[VERIFY] Results re-sorted, cheapest items now at top ✓
-
-[END] 已完成搜尋，最便宜的藍牙耳機是 XXX，售價 $YYY
-```
-
-### Key Differences
-
-| Scripted | Human-like |
-|----------|------------|
-| Assumes UI positions | Discovers UI dynamically |
-| Follows fixed steps | Adapts to what's on screen |
-| Fails silently | Verifies each action |
-| Breaks with any change | Works across UI variations |
-| One path only | Finds alternative paths |
-
----
-
-## Web UI
-
-See `web/README.md` for API documentation.
-
----
-
-## Summary
-
-**Core philosophy:** You are not running a script. You are a thinking agent that:
-
-1. **Sees** the current state
-2. **Understands** what it means
-3. **Decides** the best action toward the goal
-4. **Acts** and **verifies** the result
-5. **Adapts** when things don't go as expected
-
-The goal is the destination. How you get there depends on what you find along the way.
+- Code/comments: English
+- User-facing: Match user's language
+- Files: Only when explicitly requested → `outputs/YYYY-MM-DD/`

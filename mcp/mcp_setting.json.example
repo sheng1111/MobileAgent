@@ -22,5 +22,27 @@
       "command": "npx",
       "args": ["-y", "@upstash/context7-mcp"]
     }
+  },
+  "_optional_uiautomator2": {
+    "_comment": "Optional: Add uiautomator2 MCP server for precise element-based automation",
+    "_benefits": [
+      "click by text/resourceId/description (no coordinate guessing)",
+      "wait_for_element (reduces timing errors)",
+      "scroll_to (auto-scroll to element)",
+      "dump_hierarchy (full UI tree XML)"
+    ],
+    "_setup": "pip install mcp-android-server && ensure device connected via adb",
+    "mcp-android": {
+      "command": "python",
+      "args": ["-m", "mcp_android_server"]
+    }
+  },
+  "_alternative_uiautomator2": {
+    "_comment": "Alternative: tanbro/uiautomator2-mcp-server (GPL-3.0 license)",
+    "_setup": "uvx uiautomator2-mcp-server",
+    "uiautomator2": {
+      "command": "uvx",
+      "args": ["uiautomator2-mcp-server"]
+    }
   }
 }
