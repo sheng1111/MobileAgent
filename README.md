@@ -54,25 +54,31 @@ adb devices
 
 ```
 MobileAgent/
-├── AGENTS.md           # AI Agent guidelines
+├── AGENTS.md           # AI Agent guidelines (MUST READ)
 ├── CLAUDE.md           # Claude Code reference
 ├── GEMINI.md           # Gemini CLI reference
 ├── set.sh              # Setup script (includes skills deployment)
 ├── .skills/            # Skills source directory
-│   ├── app-action/     # App operation skill
-│   ├── device-check/   # Device check skill
-│   ├── screen-analyze/ # Screen analysis skill
-│   ├── social-media/   # Social media skill (LINE/FB/IG/X/...)
-│   ├── troubleshoot/   # Troubleshooting skill
-│   └── unicode-setup/  # Unicode setup skill
-├── src/                # Python scripts
+│   ├── app-explore/    # Main skill: app operations + research mindset
+│   ├── app-action/     # Quick single-step operations
+│   ├── patrol/         # Social media patrol (search & monitor keywords)
+│   ├── content-extract/# Full content extraction + NLP analysis
+│   ├── device-check/   # Device connection verification
+│   ├── screen-analyze/ # Screen state analysis
+│   ├── troubleshoot/   # Diagnostics and fixes
+│   └── unicode-setup/  # Unicode input configuration
+├── src/                # Python modules
 │   ├── adb_helper.py   # ADB command wrapper
-│   └── logger.py       # Logging module
+│   ├── logger.py       # Logging module
+│   ├── executor.py     # Deterministic executor (Element-First enforcement)
+│   ├── tool_router.py  # Unified MCP/ADB interface
+│   ├── state_tracker.py # Navigation state machine
+│   └── patrol.py       # Patrol automation (programmatic use)
 ├── web/                # Web UI
 │   ├── app.py          # Flask backend
 │   ├── static/         # CSS/JS
 │   └── templates/      # HTML
-├── tests/              # Test scripts
+├── tests/              # Unit tests
 ├── mcp/                # MCP configuration
 ├── apk_tools/          # APK utilities
 ├── outputs/            # Screenshots, downloads, summaries
@@ -102,9 +108,52 @@ MobileAgent uses a unified skills source directory (`.skills/`). Running `set.sh
 
 See `.skills/README.md` for details.
 
-### Social Media Skill
+### Patrol Skill (海巡)
 
-Built-in customized skill for social media platform operations:
+Like a coast guard hunting for targets, the **patrol** skill enables AI Agents to:
+- **Search** for a keyword on social media
+- **Monitor** and browse related posts
+- **Collect** opinions and sentiment about the topic
+- **Report** findings back to user
+
+Example:
+```
+User: "Search Threads for clawdbot and see what people think"
+
+AI Agent will:
+1. Launch Threads app
+2. Search "clawdbot"
+3. Browse 5+ posts mentioning it
+4. Read comments and reactions
+5. Report: "Here's what people are saying about clawdbot..."
+```
+
+The AI Agent executes this autonomously using MCP tools, tracking visited posts internally.
+
+### Content Extract Skill
+
+Extract **full content** (not summaries) from articles and posts with structured NLP analysis:
+
+- **Full text extraction**: Complete article content without truncation
+- **NLP Analysis**: Who (people), What (events), When (time), Where (locations), Objects (things/products)
+- **Keywords**: Key terms and topics
+- **Save to file**: JSON and/or Markdown format in `outputs/` directory
+
+Example:
+```
+User: "Read WeChat account 36氪's latest article, extract full content and analyze"
+
+AI Agent will:
+1. Navigate to WeChat Official Account
+2. Find and open the article
+3. Scroll and extract complete content
+4. Perform NLP analysis (who/what/when/where/objects)
+5. Save structured output to outputs/2024-01-29/wechat_36kr_article.json
+```
+
+### App Explore Skill
+
+Main skill for app operations with research mindset:
 
 | Platform | Features |
 |----------|----------|
@@ -114,6 +163,8 @@ Built-in customized skill for social media platform operations:
 | Gmail, LinkedIn, Discord, Snapchat | Platform-specific operations |
 
 Features:
+- **Element-First Strategy**: Use accessibility tree before screenshots
+- **Click-Verify Protocol**: Verify every action succeeded
 - Separated UI reference files, load on-demand to save tokens
 - Multi-language UI keywords (EN/zh/JP/KR)
 

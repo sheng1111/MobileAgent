@@ -93,6 +93,77 @@ SLOW & ERROR-PRONE (avoid):
 | Visual verification | YES - confirm state |
 | Debug mismatches | YES - compare tree vs display |
 
+## MANDATORY: Click-Verify Protocol
+
+**Every click MUST be verified.** This prevents the "phantom click" problem where you think you clicked but nothing happened.
+
+### The Protocol
+
+```
+FOR EVERY CLICK:
+1. BEFORE: mobile_list_elements_on_screen → record element count and key texts
+2. CLICK:  mobile_click_on_screen_at_coordinates
+3. WAIT:   Pause 0.5-1s for screen to update
+4. VERIFY: mobile_list_elements_on_screen again → check screen changed
+5. DECIDE: If changed → proceed. If not changed → retry or report failure.
+```
+
+### Verification Checks
+
+| Check | How | Pass Condition |
+|-------|-----|----------------|
+| Screen changed | Compare element lists | Different elements OR different count |
+| Expected state | Look for expected text | Target text/element now visible |
+| No error | Check for error messages | No "error", "failed", "not found" |
+
+### NEVER Do This
+
+```
+WRONG (no verification):
+1. mobile_click_on_screen_at_coordinates(500, 1200)
+2. "I clicked the post and now I'm viewing it..." ← ASSUMPTION!
+3. Continue with next action ← May be operating on wrong screen
+
+RIGHT (with verification):
+1. mobile_click_on_screen_at_coordinates(500, 1200)
+2. [wait 1s]
+3. mobile_list_elements_on_screen
+4. Check: Does element list contain expected content? (e.g., "comments", "reply")
+5. If YES → Continue
+6. If NO → Retry click or try alternative target
+```
+
+### Retry Protocol
+
+```
+Attempt 1: Click target → Verify → Failed
+Attempt 2: Wait 1s → Click again → Verify → Failed
+Attempt 3: Scroll slightly → Find target again → Click → Verify → Failed
+STOP: Report "Unable to enter post after 3 attempts"
+```
+
+### State Verification Examples
+
+| After Action | Expected Change |
+|--------------|-----------------|
+| Click post | See "comment", "like", "share" elements |
+| Click search | See EditText focused, keyboard visible |
+| Submit search | See results list, post cards |
+| Press back | Return to previous screen (different elements) |
+| Scroll | Different elements in view |
+
+### Why This Matters
+
+Without verification:
+- 30-50% of clicks may have no effect (timing, overlay, wrong coords)
+- You continue on wrong screen
+- Entire task fails due to compounding errors
+
+With verification:
+- Catch failures immediately
+- Retry or adapt
+- Reliable multi-step automation
+
 ## Tool Priority
 
 | Priority | Tool | Use When |

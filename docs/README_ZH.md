@@ -54,25 +54,31 @@ adb devices
 
 ```
 MobileAgent/
-├── AGENTS.md           # AI Agent 使用指南
+├── AGENTS.md           # AI Agent 使用指南（必讀）
 ├── CLAUDE.md           # Claude Code 參考
 ├── GEMINI.md           # Gemini CLI 參考
 ├── set.sh              # 設定腳本（含 Skills 部署）
 ├── .skills/            # Skills 來源目錄
-│   ├── app-action/     # App 操作技能
-│   ├── device-check/   # 裝置檢查技能
-│   ├── screen-analyze/ # 畫面分析技能
-│   ├── social-media/   # 社群平台操作技能 (LINE/FB/IG/X/...)
-│   ├── troubleshoot/   # 問題診斷技能
-│   └── unicode-setup/  # Unicode 設定技能
-├── src/                # Python 腳本
+│   ├── app-explore/    # 主要技能：App 操作 + 研究思維
+│   ├── app-action/     # 快速單步操作
+│   ├── patrol/         # 海巡技能（搜尋關鍵字、監控輿情）
+│   ├── content-extract/# 完整內容擷取 + NLP 分析
+│   ├── device-check/   # 裝置連線檢查
+│   ├── screen-analyze/ # 畫面狀態分析
+│   ├── troubleshoot/   # 問題診斷
+│   └── unicode-setup/  # Unicode 輸入設定
+├── src/                # Python 模組
 │   ├── adb_helper.py   # ADB 指令封裝
-│   └── logger.py       # 日誌模組
+│   ├── logger.py       # 日誌模組
+│   ├── executor.py     # 確定性執行器（Element-First 強制）
+│   ├── tool_router.py  # 統一 MCP/ADB 介面
+│   ├── state_tracker.py # 導航狀態機
+│   └── patrol.py       # 海巡自動化（程式化使用）
 ├── web/                # Web UI
 │   ├── app.py          # Flask 後端
 │   ├── static/         # CSS/JS
 │   └── templates/      # HTML
-├── tests/              # 測試腳本
+├── tests/              # 單元測試
 ├── mcp/                # MCP 設定
 ├── apk_tools/          # APK 工具
 ├── outputs/            # 截圖、下載、摘要
@@ -102,9 +108,48 @@ MobileAgent 使用統一的 Skills 來源目錄 (`.skills/`)，執行 `set.sh` �
 
 詳細說明請參閱 `.skills/README.md`。
 
-### 社群平台技能 (Social Media Skill)
+### 海巡技能 (Patrol Skill)
 
-內建客製化的社群平台操作技能，支援：
+像海巡署查緝走私一樣，**主動搜尋**特定關鍵字，**緊盯**相關貼文，**收集情報**回報給用戶。
+
+使用範例：
+```
+用戶：「打開 Threads 搜尋 clawdbot，看看網路上對這個工具的評價」
+
+AI Agent 會：
+1. 啟動 Threads app
+2. 搜尋 "clawdbot"
+3. 瀏覽 5+ 篇相關貼文
+4. 閱讀留言和反應
+5. 回報：「以下是大家對 clawdbot 的評價...」
+```
+
+AI Agent 會自主執行 MCP 工具，內部追蹤已訪問的貼文，避免重複。
+
+### 內容擷取技能 (Content Extract Skill)
+
+擷取**完整內容**（非摘要）並進行結構化 NLP 分析：
+
+- **完整文字擷取**：完整文章內容，不截斷
+- **NLP 分析**：人（人物）、事（事件）、時（時間）、地（地點）、物（事物/產品）
+- **關鍵字**：主要詞彙和主題
+- **儲存檔案**：JSON 和/或 Markdown 格式，存放於 `outputs/` 目錄
+
+使用範例：
+```
+用戶：「看微信公眾號 36氪 的最新文章，提取完整內容，分析人事時地物」
+
+AI Agent 會：
+1. 導航到微信公眾號
+2. 找到並開啟文章
+3. 滾動並擷取完整內容
+4. 進行 NLP 分析（人/事/時/地/物）
+5. 儲存結構化輸出到 outputs/2024-01-29/wechat_36kr_article.json
+```
+
+### App 探索技能 (App Explore Skill)
+
+主要的 App 操作技能，帶有研究思維：
 
 | 平台 | 功能 |
 |------|------|
@@ -114,6 +159,8 @@ MobileAgent 使用統一的 Skills 來源目錄 (`.skills/`)，執行 `set.sh` �
 | Gmail, LinkedIn, Discord, Snapchat | 各平台特定操作 |
 
 特色：
+- **Element-First 策略**：優先使用元素樹，而非截圖
+- **Click-Verify 協議**：每次點擊都驗證是否成功
 - 分離式 UI 參考檔，按需載入節省 tokens
 - 多語言 UI 關鍵字對照（EN/zh/JP/KR）
 

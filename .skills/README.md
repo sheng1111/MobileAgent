@@ -25,6 +25,10 @@ Unified AI Agent Skills source directory. Running `./set.sh` automatically valid
 │       └── ui-*.md
 ├── app-action/           # Quick single-step operations
 │   └── SKILL.md
+├── patrol/               # Search & monitor keywords (海巡)
+│   └── SKILL.md
+├── content-extract/      # Full content extraction + NLP analysis
+│   └── SKILL.md
 ├── device-check/         # Device connection verification
 │   └── SKILL.md
 ├── screen-analyze/       # Screen state analysis
@@ -41,6 +45,7 @@ Unified AI Agent Skills source directory. Running `./set.sh` automatically valid
 |-------|---------|-------------|
 | **app-explore** | App operations with research mindset | Research, browse, multi-step tasks |
 | **app-action** | Quick single-step operations | Launch, tap, type, simple tasks |
+| **patrol** | Systematic social media browsing | Search → browse posts → read comments → collect |
 | **device-check** | Verify device connection | Before automation, connection issues |
 | **screen-analyze** | Analyze current screen | Find elements, understand UI state |
 | **troubleshoot** | Fix common issues | Errors, failures, debugging |

@@ -23,13 +23,20 @@ adb kill-server && adb start-server
 ## Architecture
 
 ```
-src/adb_helper.py    # ADB wrapper (tap, swipe, type_text, screenshot)
-src/logger.py        # Logging -> temp/logs/mobile_agent_YYYYMMDD.log
+src/
+├── adb_helper.py    # ADB wrapper (tap, swipe, type_text, screenshot)
+├── logger.py        # Logging -> temp/logs/mobile_agent_YYYYMMDD.log
+├── executor.py      # Deterministic Executor (Element-First enforcement)
+├── tool_router.py   # Unified MCP/ADB tool interface
+├── state_tracker.py # Navigation state machine, visited tracking
+└── patrol.py        # Social media patrol automation
+
 apk_tools/           # DeviceKit (MCP), ADBKeyboard (Python) APKs
 outputs/             # User-requested outputs only
 mcp/                 # MCP server configs
 web/                 # Web UI for device management
 .skills/             # Agent skills for specific tasks
+tests/               # Unit tests
 ```
 
 ## Tool Selection
@@ -38,29 +45,12 @@ Prefer MCP tools for device interaction. Use Python (`src/adb_helper.py`) as fal
 
 ### Element-First Strategy (CRITICAL)
 
-**ALWAYS use accessibility tree before screenshots. This is the #1 rule for speed and accuracy.**
+**ALWAYS use accessibility tree before screenshots:**
 
 ```
-CORRECT FLOW (fast, reliable):
-1. mobile_list_elements_on_screen
-2. Find target by text/type/identifier
-3. Calculate center: (x + width/2, y + height/2)
-4. mobile_click_on_screen_at_coordinates
-
-WRONG FLOW (slow, error-prone):
-1. mobile_take_screenshot
-2. Visually guess coordinates
-3. mobile_click_on_screen_at_coordinates
-4. Misclick → repeat from step 1
+CORRECT: list_elements → find by text/id → click center
+WRONG:   screenshot → guess coordinates → click
 ```
-
-### Why Element-First
-
-| Aspect | Element List | Screenshot |
-|--------|--------------|------------|
-| Speed | ~100ms | 2-5s (+ vision analysis) |
-| Accuracy | Pixel-perfect bounds | Guessing, often misses |
-| Reliability | Stable identifiers | Position varies |
 
 ### Tool Priority
 
@@ -73,22 +63,11 @@ WRONG FLOW (slow, error-prone):
 | 5 | Unicode text (fallback) | Python: `adb.type_text()` + ADBKeyboard |
 | 6 | File transfer, device info | Python only |
 
-### When to Use Screenshot
+### Why Element-First
 
-- Element not in accessibility tree (custom UI, games, canvas)
-- Visual verification after action
-- Debugging when element tree doesn't match display
-
-### Wait Before Acting
-
-Many errors are timing issues, not coordinate issues:
-
-| After... | Wait |
-|----------|------|
-| App launch | 2-3s for splash to complete |
-| Navigation | 1-2s for screen transition |
-| Typing | 1s for suggestions to appear |
-| Scroll | 1s for content to load |
+- **Speed**: Element list ~100ms vs screenshot+vision 2-5s
+- **Accuracy**: Element bounds are pixel-perfect
+- **Reliability**: resourceId/identifier stable across runs
 
 ## MCP Tool Notes
 
@@ -97,6 +76,8 @@ mobile_list_available_devices requires: { "noParams": {} }
 ```
 
 ## Python API
+
+### Basic ADB Operations
 
 ```python
 from src.adb_helper import ADBHelper
@@ -108,6 +89,62 @@ adb.screenshot(prefix="step1")
 
 # All methods return (success, message) tuple
 ok, msg = adb.tap(540, 1200)
+```
+
+### Deterministic Executor (Click-Verify Enforcement)
+
+```python
+from src.executor import DeterministicExecutor
+
+executor = DeterministicExecutor()
+
+# Observe → Find → Click → Verify
+state = executor.observe()
+element = executor.find_element(text="Search")
+if element:
+    result = executor.click_and_verify(element)
+    if result.result == ActionResult.SUCCESS:
+        print("Click verified!")
+```
+
+### Tool Router (Unified Interface)
+
+```python
+from src.tool_router import ToolRouter
+
+router = ToolRouter()
+
+# Auto-selects best tool (MCP or ADB)
+router.click(text="Search")           # Find by text, then click
+router.type_text("Hello 你好")         # Unicode supported
+router.swipe("up", verify=True)       # Scroll with verification
+router.wait_for_element(text="Results")
+```
+
+### State Tracker (Visited Tracking)
+
+```python
+from src.state_tracker import StateTracker
+
+tracker = StateTracker(platform="threads")
+tracker.mark_visited(title="Post 1", author="@user")
+if not tracker.is_visited(title="Post 2", author="@user"):
+    # Visit this post
+    pass
+tracker.save()  # Persist to disk
+```
+
+### Patrol Automation
+
+```python
+from src.patrol import PatrolStateMachine, PatrolConfig
+
+config = PatrolConfig(max_posts=10, max_scrolls=5)
+patrol = PatrolStateMachine(platform="threads", config=config)
+report = patrol.run(keyword="AI agents")
+
+print(f"Visited {len(report.posts)} posts")
+print(report.summary)
 ```
 
 ## Code Style

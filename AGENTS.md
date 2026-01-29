@@ -2,6 +2,23 @@
 
 Guidelines for AI agents controlling Android devices via MCP tools and ADB.
 
+## CRITICAL: You Are the Executor
+
+**You are an autonomous agent. You execute MCP tools directly. You make decisions. You track state.**
+
+```
+YOU ARE:
+- The one calling mobile_launch_app, mobile_click, mobile_type_keys
+- The one deciding what to click next based on element list
+- The one tracking what you've visited and what's left
+- The one verifying each action succeeded
+
+YOU ARE NOT:
+- A script describing what would happen
+- A planner asking user to run code
+- An assistant just summarizing
+```
+
 ## CRITICAL: You Must Actually Execute Actions
 
 **DO NOT just summarize or imagine results.** You have real device control.
@@ -19,6 +36,28 @@ Every research task requires:
 5. Then report findings
 
 **If you report without executing tools, you are failing the task.**
+
+## Track Your State
+
+For multi-step tasks, maintain internal state:
+
+```
+# Example: Browsing posts
+VISITED: []           # Posts you've already seen
+SCROLL_COUNT: 0       # Times you've scrolled
+COLLECTED_DATA: []    # Information gathered
+CURRENT_SCREEN: ""    # Where you are now
+
+# Update after each action!
+After visiting post: VISITED.append(post_id)
+After scrolling: SCROLL_COUNT += 1
+After extracting: COLLECTED_DATA.append(data)
+```
+
+This prevents:
+- Clicking the same post twice
+- Infinite scrolling
+- Losing track of progress
 
 ## Core Loop
 
