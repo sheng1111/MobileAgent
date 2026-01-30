@@ -1,10 +1,10 @@
 #!/bin/bash
 # MobileAgent Setup Script
-# 設定 Python 虛擬環境、MCP 設定、並部署 Skills 到偵測到的 AI Agents
+# Sets up Python virtual environment, MCP configuration, and deploys Skills to detected AI Agents
 
 set -e
 
-# 顏色定義
+# Color definitions
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
-# 取得腳本所在目錄（專案根目錄）
+# Get script directory (project root)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_DIR="${SCRIPT_DIR}/.venv"
 MCP_DIR="${SCRIPT_DIR}/mcp"
@@ -29,7 +29,7 @@ echo -e "Project path: ${GREEN}${SCRIPT_DIR}${NC}"
 echo ""
 
 # =============================================================================
-# 檢查相依套件
+# Check Dependencies
 # =============================================================================
 check_command() {
     if command -v "$1" &> /dev/null; then
@@ -64,7 +64,7 @@ if [ $MISSING_DEPS -eq 1 ]; then
 fi
 
 # =============================================================================
-# Python 虛擬環境
+# Python Virtual Environment
 # =============================================================================
 echo -e "${YELLOW}Setting up Python virtual environment...${NC}"
 echo ""
@@ -77,16 +77,16 @@ else
     echo -e "${GREEN}[OK]${NC} Virtual environment created: ${VENV_DIR}"
 fi
 
-# 啟動虛擬環境
+# Activate virtual environment
 echo -e "${BLUE}[INFO]${NC} Activating virtual environment..."
 source "${VENV_DIR}/bin/activate"
 echo -e "${GREEN}[OK]${NC} Virtual environment activated"
 
-# 升級 pip
+# Upgrade pip
 echo -e "${BLUE}[INFO]${NC} Upgrading pip..."
 "${VENV_DIR}/bin/pip" install --upgrade pip -q
 
-# 安裝相依套件
+# Install requirements
 if [ -f "$REQUIREMENTS" ]; then
     echo -e "${BLUE}[INFO]${NC} Installing requirements..."
     "${VENV_DIR}/bin/pip" install -r "$REQUIREMENTS" -q
@@ -95,10 +95,27 @@ else
     echo -e "${YELLOW}[SKIP]${NC} No requirements.txt found"
 fi
 
+# Install uiautomator2 (recommended for selector-based automation)
+echo -e "${BLUE}[INFO]${NC} Installing uiautomator2..."
+"${VENV_DIR}/bin/pip" install uiautomator2 -q
+echo -e "${GREEN}[OK]${NC} uiautomator2 installed"
+
+# If device connected, auto-initialize u2
+if command -v adb &> /dev/null; then
+    DEVICE_COUNT=$(adb devices 2>/dev/null | grep -v "^List" | grep -v "^$" | wc -l)
+    if [ "$DEVICE_COUNT" -gt 0 ]; then
+        echo -e "${BLUE}[INFO]${NC} Detected ${DEVICE_COUNT} device(s), initializing uiautomator2..."
+        "${VENV_DIR}/bin/python" -m uiautomator2 init 2>/dev/null || echo -e "${YELLOW}[WARN]${NC} u2 init failed (device may need USB debugging enabled)"
+        echo -e "${GREEN}[OK]${NC} uiautomator2 initialized on device"
+    else
+        echo -e "${YELLOW}[INFO]${NC} No device connected - run 'python -m uiautomator2 init' later"
+    fi
+fi
+
 echo ""
 
 # =============================================================================
-# MCP 設定
+# MCP Configuration
 # =============================================================================
 echo -e "${YELLOW}Configuring MCP settings...${NC}"
 echo ""
@@ -148,7 +165,7 @@ echo -e "${GREEN}[OK]${NC} MCP configuration generated: ${MCP_CONFIG}"
 echo ""
 
 # =============================================================================
-# 自動設定 AI CLI 工具的 MCP
+# Auto-configure MCP for AI CLI Tools
 # =============================================================================
 echo -e "${YELLOW}Configuring MCP for AI CLI tools...${NC}"
 echo ""
@@ -158,7 +175,7 @@ if ! command -v jq &> /dev/null; then
     echo "       Install jq to enable auto-configuration: sudo apt install jq"
     echo ""
 else
-    # Gemini CLI MCP 格式
+    # Gemini CLI MCP format
     GEMINI_MCP_SERVERS=$(cat << EOF
 {
   "mobile-mcp": {
@@ -181,7 +198,7 @@ else
 EOF
 )
 
-    # Claude Code MCP 格式（需要 type: "stdio"）
+    # Claude Code MCP format (requires type: "stdio")
     CLAUDE_MCP_SERVERS=$(cat << EOF
 {
   "mobile-mcp": {
@@ -294,10 +311,10 @@ EOF
 fi
 
 # =============================================================================
-# Skills 驗證與部署
+# Skills Validation and Deployment
 # =============================================================================
 
-# 從 YAML frontmatter 提取欄位值
+# Extract field value from YAML frontmatter
 extract_frontmatter_field() {
     local file="$1"
     local field="$2"
@@ -321,34 +338,34 @@ extract_frontmatter_field() {
     echo "$frontmatter" | grep "^${field}:" | sed "s/^${field}:[[:space:]]*//" | head -1
 }
 
-# 驗證單一 skill
+# Validate a single skill
 validate_skill() {
     local skill_dir="$1"
     local skill_name=$(basename "$skill_dir")
     local skill_file="${skill_dir}/SKILL.md"
     local has_error=false
     
-    # 檢查 SKILL.md 是否存在
+    # Check if SKILL.md exists
     if [ ! -f "$skill_file" ]; then
         echo -e "       ${RED}[X]${NC} ${skill_name}: Missing SKILL.md"
         return 1
     fi
     
-    # 檢查 frontmatter
+    # Check frontmatter
     local first_line=$(head -1 "$skill_file")
     if [ "$first_line" != "---" ]; then
         echo -e "       ${RED}[X]${NC} ${skill_name}: Missing YAML frontmatter"
         return 1
     fi
     
-    # 驗證 name 欄位
+    # Validate name field
     local name=$(extract_frontmatter_field "$skill_file" "name")
     if [ -z "$name" ]; then
         echo -e "       ${RED}[X]${NC} ${skill_name}: Missing 'name' in frontmatter"
         return 1
     fi
     
-    # 驗證 description 欄位
+    # Validate description field
     local description=$(extract_frontmatter_field "$skill_file" "description")
     if [ -z "$description" ]; then
         echo -e "       ${RED}[X]${NC} ${skill_name}: Missing 'description' in frontmatter"
@@ -358,7 +375,7 @@ validate_skill() {
     return 0
 }
 
-# 驗證所有 skills
+# Validate all skills
 validate_all_skills() {
     local skills_dir="$1"
     local total=0
@@ -387,7 +404,7 @@ validate_all_skills() {
     fi
 }
 
-# AI Agent 偵測函數
+# AI Agent detection functions
 detect_cursor() {
     [ -d "$HOME/.cursor" ]
 }
@@ -412,7 +429,7 @@ detect_roo() {
     [ -d "$HOME/.roo" ]
 }
 
-# 部署 skills 到指定目錄
+# Deploy skills to target directory
 deploy_skills_to() {
     local agent_name="$1"
     local target_dir="$2"
@@ -440,18 +457,18 @@ deploy_skills_to() {
 echo -e "${YELLOW}Deploying skills to detected AI Agents...${NC}"
 echo ""
 
-# 檢查 skills 來源目錄
+# Check skills source directory
 if [ ! -d "$SKILLS_SOURCE" ]; then
     echo -e "${YELLOW}[SKIP]${NC} Skills source directory not found: ${SKILLS_SOURCE}"
 else
-    # 驗證 skills
+    # Validate skills
     echo -e "${BLUE}[INFO]${NC} Validating skills..."
     if ! validate_all_skills "$SKILLS_SOURCE"; then
         echo -e "${YELLOW}[WARN]${NC} Some skills have issues"
     fi
     echo ""
     
-    # 偵測並部署
+    # Detect and deploy
     echo -e "${BLUE}[INFO]${NC} Detecting AI Agents..."
     
     DEPLOYED=0
@@ -494,7 +511,7 @@ fi
 echo ""
 
 # =============================================================================
-# 建立必要目錄
+# Create Required Directories
 # =============================================================================
 echo -e "${YELLOW}Creating directories...${NC}"
 echo ""
@@ -508,7 +525,7 @@ echo -e "${GREEN}[OK]${NC} temp/logs/"
 echo ""
 
 # =============================================================================
-# 總結
+# Summary
 # =============================================================================
 echo -e "${BLUE}========================================${NC}"
 echo -e "${GREEN}   Setup Complete!${NC}"

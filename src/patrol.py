@@ -40,6 +40,7 @@ from logger import get_logger
 from executor import DeterministicExecutor, ScreenState, Element, ExecutionResult, ActionResult
 from tool_router import ToolRouter
 from state_tracker import StateTracker, NavigationState, VisitedItem
+from platform_adapter import get_adapter, PlatformAdapter, PostCard
 
 logger = get_logger(__name__)
 
@@ -243,6 +244,9 @@ class PatrolStateMachine:
         self.router = ToolRouter(device_id)
         self.tracker = StateTracker(platform=platform)
 
+        # Platform adapter (unified interface for platform-specific logic)
+        self.adapter = get_adapter(platform)
+
         # State
         self.state = PatrolState.INIT
         self.keyword = ""
@@ -255,11 +259,11 @@ class PatrolStateMachine:
         self.error_count = 0
         self.start_time = 0.0
 
-        # Platform config
-        self.package = PACKAGE_NAMES.get(platform, "")
+        # Platform config (use adapter)
+        self.package = self.adapter.package_name
         self.patterns = SEARCH_PATTERNS.get(platform, SEARCH_PATTERNS["default"])
 
-        logger.info(f"Patrol initialized: platform={platform}, package={self.package}")
+        logger.info(f"Patrol initialized: platform={platform}, package={self.package}, adapter={type(self.adapter).__name__}")
 
     # =========================================================================
     # Main Entry Point
@@ -339,36 +343,40 @@ class PatrolStateMachine:
         return True  # Proceed anyway, might work
 
     def _do_search(self) -> bool:
-        """Execute search flow"""
+        """Execute search flow using platform adapter"""
         self.state = PatrolState.FINDING_SEARCH
 
-        # Find search icon/input
+        # Find search icon/input using adapter
         search_found = False
         for attempt in range(3):
             state = self.executor.observe()
 
-            # Try to find search input directly
-            search_input = state.find(type="EditText")
+            # Use adapter to find search input directly
+            search_input = self.adapter.find_search_input(state.elements)
             if search_input:
-                logger.info("Found search input directly")
+                logger.info(f"Found search input via {type(self.adapter).__name__}")
                 ok, _ = self.router.click(element=search_input)
                 if ok:
                     search_found = True
                     break
 
-            # Try to find search icon
-            search_icon = state.find(text="Search") or state.find(text="搜尋")
-            if search_icon:
-                logger.info("Found search icon")
-                ok, _ = self.router.click(element=search_icon)
+            # Use adapter to find search entry (icon/tab)
+            search_entry = self.adapter.find_search_entry(state.elements)
+            if search_entry:
+                logger.info(f"Found search entry via {type(self.adapter).__name__}")
+                ok, _ = self.router.click(element=search_entry)
                 if ok:
                     time.sleep(1)
+                    # After clicking entry, look for input again
+                    state = self.executor.observe()
+                    search_input = self.adapter.find_search_input(state.elements)
+                    if search_input:
+                        self.router.click(element=search_input, verify=False)
                     search_found = True
                     break
 
-            # Platform-specific: Threads search is in top-right
+            # Fallback: platform-specific hardcoded positions
             if self.platform == "threads":
-                # Try top-right area
                 w, h = self.router.screen_size
                 self.router.click(x=w - 80, y=120, verify=False)
                 time.sleep(1)
@@ -394,10 +402,14 @@ class PatrolStateMachine:
         time.sleep(self.config.wait_after_search)
         self.state = PatrolState.VIEWING_RESULTS
 
-        # Verify results appeared
+        # Verify results appeared using adapter
         state = self.executor.observe()
-        self.tracker.detect_state(state.elements)
+        if self.adapter.is_search_results(state.elements):
+            logger.info("Search results verified via adapter")
+        else:
+            logger.warning("Could not verify search results, continuing anyway")
 
+        self.tracker.detect_state(state.elements)
         logger.info("Search completed, viewing results")
         return True
 
@@ -471,28 +483,25 @@ class PatrolStateMachine:
     # =========================================================================
 
     def _scan_visible_posts(self) -> List[Dict]:
-        """Scan visible posts from current screen"""
+        """Scan visible posts from current screen using platform adapter"""
         state = self.executor.observe()
+
+        # Use adapter for platform-specific post extraction
+        post_cards = self.adapter.extract_post_cards(state.elements)
+
+        # Convert PostCard to dict format (for backward compatibility)
         posts = []
+        for card in post_cards:
+            posts.append({
+                "element": card.element,
+                "text": card.text,
+                "author": card.author_id or card.author,
+                "bounds": card.bounds,
+                "id": card.unique_id,
+                "card": card  # Keep original PostCard for richer data
+            })
 
-        # Find post-like elements (clickable items with text)
-        for el in state.elements:
-            if el.clickable and (el.text or el.content_desc):
-                # Filter out navigation/system elements
-                skip_texts = ["Home", "Search", "Profile", "Create", "Back",
-                              "首頁", "搜尋", "個人檔案", "建立", "返回"]
-                if any(skip in el.text for skip in skip_texts):
-                    continue
-
-                posts.append({
-                    "element": el,
-                    "text": el.text,
-                    "author": self._extract_author(el),
-                    "bounds": el.bounds,
-                    "id": self._generate_post_id(el)
-                })
-
-        logger.debug(f"Found {len(posts)} potential posts")
+        logger.debug(f"Found {len(posts)} potential posts via {type(self.adapter).__name__}")
         return posts
 
     def _extract_author(self, element: Element) -> str:

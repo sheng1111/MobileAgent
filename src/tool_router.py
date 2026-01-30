@@ -1,19 +1,24 @@
 #!/usr/bin/env python3
 """
-Tool Router - Unified interface for MCP and ADB tools.
+Tool Router - Unified interface for MCP, ADB, and uiautomator2 tools.
 
 This module provides intelligent tool selection:
-1. MCP tools (fast, reliable) - preferred when available
-2. Python ADB (full control) - fallback for unsupported operations
+1. uiautomator2 (selector-based, most reliable) - preferred when available
+2. MCP tools (fast, coordinate-based)
+3. Python ADB (full control) - fallback
 
 Usage:
     from src.tool_router import ToolRouter
 
     router = ToolRouter()
 
-    # Click with automatic tool selection
+    # Selector-based click (uses u2 when available, falls back to element search)
     router.click(text="Search")  # Finds element by text, then clicks
     router.click(x=540, y=1200)  # Direct coordinate click
+
+    # Direct selector operations (requires uiautomator2)
+    router.click_by_selector(text="Search")  # No coordinate lookup needed
+    router.wait_for_element(text="Loading", gone=True)
 
     # Type with Unicode support
     router.type_text("Hello 你好")
@@ -40,14 +45,23 @@ from adb_helper import (
 )
 from executor import DeterministicExecutor, ScreenState, Element, ExecutionResult, ActionResult
 
+# Try to import U2Driver
+try:
+    from u2_driver import U2Driver, get_u2_driver, U2_AVAILABLE
+except ImportError:
+    U2_AVAILABLE = False
+    U2Driver = None
+    get_u2_driver = None
+
 logger = get_logger(__name__)
 
 
 class ToolType(Enum):
     """Tool provider type"""
-    MCP = "mcp"
-    ADB = "adb"
-    AUTO = "auto"
+    U2 = "u2"      # uiautomator2 (selector-based, most reliable)
+    MCP = "mcp"    # MCP tools (fast, coordinate-based)
+    ADB = "adb"    # Python ADB (fallback)
+    AUTO = "auto"  # Auto-select best available
 
 
 @dataclass
@@ -69,18 +83,32 @@ class ToolRouter:
     3. ADB fallback (full control)
     """
 
-    def __init__(self, device_id: str = None, prefer_mcp: bool = True):
+    def __init__(self, device_id: str = None, prefer_u2: bool = True,
+                 prefer_mcp: bool = True):
         """
         Initialize router.
 
         Args:
             device_id: Device serial (auto-detect if None)
-            prefer_mcp: Whether to prefer MCP tools when available
+            prefer_u2: Whether to prefer uiautomator2 when available (most reliable)
+            prefer_mcp: Whether to prefer MCP tools over ADB
         """
-        self.device_id = device_id
+        self.prefer_u2 = prefer_u2
         self.prefer_mcp = prefer_mcp
         self.adb = ADBHelper(device_id)
-        self.executor = DeterministicExecutor(device_id)
+        self.device_id = device_id or self.adb.device_id  # Sync with auto-detected device
+        self.executor = DeterministicExecutor(self.device_id)
+
+        # Initialize U2Driver if available
+        self.u2: Optional[U2Driver] = None
+        if U2_AVAILABLE and prefer_u2:
+            try:
+                self.u2 = get_u2_driver(self.device_id)
+                if self.u2 and self.u2.connected:
+                    logger.info("U2Driver initialized (selector-based operations enabled)")
+            except Exception as e:
+                logger.warning(f"U2Driver initialization failed: {e}")
+                self.u2 = None
 
         # MCP callbacks (set by AI agent or external caller)
         self._mcp_list_elements: Optional[Callable] = None
@@ -94,7 +122,7 @@ class ToolRouter:
         # Get device info
         if self.adb.device_id:
             self.screen_size = self.adb.get_screen_size()
-            logger.info(f"ToolRouter initialized: device={self.adb.device_id}, screen={self.screen_size}")
+            logger.info(f"ToolRouter initialized: device={self.adb.device_id}, screen={self.screen_size}, u2={self.u2 is not None}")
         else:
             self.screen_size = (1080, 2400)  # Default
             logger.warning("No device connected, using default screen size")
@@ -186,27 +214,39 @@ class ToolRouter:
     def click(self, x: int = None, y: int = None,
               text: str = None, element_type: str = None,
               identifier: str = None, element: Element = None,
-              verify: bool = True) -> Tuple[bool, str]:
+              verify: bool = True, use_u2: bool = None) -> Tuple[bool, str]:
         """
-        Click with automatic target resolution.
+        Click with automatic target resolution and tool selection.
 
-        Priority:
-        1. element (if provided)
-        2. text/type/identifier search
-        3. x, y coordinates
+        Tool Priority (when use_u2=None/True and selector provided):
+        1. uiautomator2 selector click (most reliable, no coordinate guessing)
+        2. Element search + coordinate click
+        3. Direct coordinate click
 
         Args:
             x, y: Direct coordinates
             text: Find element by text
-            element_type: Find element by type
+            element_type: Find element by type (className for u2)
             identifier: Find element by resource ID
             element: Click this element directly
             verify: Whether to verify click (slower but reliable)
+            use_u2: Force use/skip u2 (None=auto)
 
         Returns:
             (success, message) tuple
         """
-        # Resolve click target
+        # Try U2 selector-based click first (most reliable)
+        should_use_u2 = use_u2 if use_u2 is not None else self.prefer_u2
+        if should_use_u2 and self.u2 and self.u2.connected:
+            # Only use u2 for selector-based clicks (not direct coordinates)
+            if text or identifier or (element_type and not x and not y):
+                ok, msg = self._click_via_u2(text, element_type, identifier)
+                if ok:
+                    return True, msg
+                # Fall through to coordinate-based if u2 failed
+                logger.debug(f"U2 click failed, falling back: {msg}")
+
+        # Resolve click target (coordinate-based)
         target = self._resolve_click_target(x, y, text, element_type, identifier, element)
         if not target:
             return False, "Could not resolve click target"
@@ -232,6 +272,23 @@ class ToolRouter:
                     logger.warning(f"MCP click failed: {e}, falling back to ADB")
 
             return tap(target.x, target.y, self.device_id)
+
+    def _click_via_u2(self, text: str = None, element_type: str = None,
+                       identifier: str = None) -> Tuple[bool, str]:
+        """Click using uiautomator2 selector (internal)"""
+        if not self.u2:
+            return False, "U2 not available"
+
+        try:
+            if identifier:
+                return self.u2.click_by_id(identifier, timeout=3.0)
+            elif text:
+                return self.u2.click_by_text(text, timeout=3.0)
+            elif element_type:
+                return self.u2.click_by_selector(className=element_type, timeout=3.0)
+            return False, "No selector provided"
+        except Exception as e:
+            return False, str(e)
 
     def _resolve_click_target(self, x: int = None, y: int = None,
                                text: str = None, element_type: str = None,
@@ -603,6 +660,15 @@ class ToolRouter:
 
     def get_current_package(self) -> Optional[str]:
         """Get current foreground app package"""
+        # Try U2 first (more reliable)
+        if self.u2 and self.u2.connected:
+            try:
+                app = self.u2.current_app()
+                if app:
+                    return app.get('package')
+            except Exception:
+                pass
+
         args = ["shell", "dumpsys", "window", "windows"]
         if self.device_id:
             args = ["-s", self.device_id] + args
@@ -614,6 +680,179 @@ class ToolRouter:
             if match:
                 return match.group(1)
         return None
+
+    # =========================================================================
+    # Selector-Based Operations (requires uiautomator2)
+    # =========================================================================
+
+    @property
+    def u2_available(self) -> bool:
+        """Check if uiautomator2 is available and connected"""
+        return self.u2 is not None and self.u2.connected
+
+    def click_by_selector(self, timeout: float = 5.0, **selector) -> Tuple[bool, str]:
+        """
+        Click element using uiautomator2 selector (no coordinate lookup needed).
+
+        This is the most reliable click method when u2 is available.
+
+        Args:
+            timeout: Wait timeout
+            **selector: uiautomator2 selector kwargs:
+                - text: Text content
+                - textContains: Partial text match
+                - resourceId: Resource ID (e.g., "com.app:id/button")
+                - className: Class name (e.g., "android.widget.Button")
+                - description: Content description
+                - descriptionContains: Partial description match
+                - clickable: True/False
+                - enabled: True/False
+
+        Returns:
+            (success, message)
+
+        Example:
+            router.click_by_selector(text="Login")
+            router.click_by_selector(resourceId="com.app:id/submit", clickable=True)
+        """
+        if not self.u2_available:
+            return False, "uiautomator2 not available"
+
+        return self.u2.click_by_selector(timeout=timeout, **selector)
+
+    def click_if_exists(self, timeout: float = 3.0, **selector) -> bool:
+        """
+        Click element if it exists (no error if not found).
+
+        Useful for dismissing optional popups/dialogs.
+
+        Returns:
+            True if clicked, False if not found
+        """
+        if not self.u2_available:
+            # Fallback: try normal click
+            ok, _ = self.click(**selector, verify=False)
+            return ok
+
+        return self.u2.click_if_exists(timeout=timeout, **selector)
+
+    def wait_for_element_u2(self, timeout: float = 10.0, gone: bool = False,
+                            **selector) -> Tuple[bool, Any]:
+        """
+        Wait for element using uiautomator2 (more reliable than polling).
+
+        Args:
+            timeout: Wait timeout
+            gone: If True, wait for element to disappear
+            **selector: uiautomator2 selector kwargs
+
+        Returns:
+            (found/gone, element_info)
+
+        Example:
+            # Wait for loading to finish
+            router.wait_for_element_u2(text="Loading", gone=True, timeout=10)
+
+            # Wait for results to appear
+            found, el = router.wait_for_element_u2(text="Results")
+        """
+        if not self.u2_available:
+            # Fallback to executor
+            if gone:
+                # Poll for element to disappear
+                start = time.time()
+                while time.time() - start < timeout:
+                    if not self.has_text(list(selector.values())[0] if selector else ""):
+                        return True, None
+                    time.sleep(0.5)
+                return False, None
+            else:
+                return self.executor.wait_for_element(timeout, **selector)
+
+        return self.u2.wait_for_element(timeout=timeout, gone=gone, **selector)
+
+    def scroll_to_element(self, max_scrolls: int = 10, direction: str = "down",
+                          **selector) -> Tuple[bool, Any]:
+        """
+        Scroll until element is found using uiautomator2.
+
+        Args:
+            max_scrolls: Maximum scroll attempts
+            direction: "up", "down", "left", "right"
+            **selector: Element selector
+
+        Returns:
+            (found, element_info)
+
+        Example:
+            found, el = router.scroll_to_element(text="Settings", max_scrolls=5)
+        """
+        if not self.u2_available:
+            # Fallback: manual scroll and search
+            return self.scroll_to_text(
+                list(selector.values())[0] if 'text' in selector else "",
+                max_scrolls=max_scrolls,
+                direction=direction
+            )
+
+        return self.u2.scroll_to(direction=direction, max_scrolls=max_scrolls, **selector)
+
+    def type_into_element(self, text: str, clear_first: bool = True,
+                          **selector) -> Tuple[bool, str]:
+        """
+        Find element, click it, and type text using uiautomator2.
+
+        Args:
+            text: Text to type
+            clear_first: Clear existing text first
+            **selector: Element selector
+
+        Returns:
+            (success, message)
+
+        Example:
+            router.type_into_element("search query", resourceId="com.app:id/search_input")
+        """
+        if not self.u2_available:
+            # Fallback: click then type
+            ok, msg = self.click(**selector, verify=False)
+            if not ok:
+                return False, f"Failed to click element: {msg}"
+            time.sleep(0.3)
+            return self.type_text(text)
+
+        return self.u2.type_into(text, clear_first=clear_first, **selector)
+
+    def dump_ui_hierarchy(self) -> Optional[str]:
+        """
+        Dump UI hierarchy XML (useful for debugging).
+
+        Returns:
+            XML string of UI hierarchy
+        """
+        if not self.u2_available:
+            # Fallback: use uiautomator dump via ADB
+            try:
+                dump_path = "/sdcard/window_dump.xml"
+                local_path = os.path.join(PROJECT_ROOT, "temp", "hierarchy_dump.xml")
+                args = ["shell", "uiautomator", "dump", dump_path]
+                if self.device_id:
+                    args = ["-s", self.device_id] + args
+                run_adb(args)
+
+                pull_args = ["pull", dump_path, local_path]
+                if self.device_id:
+                    pull_args = ["-s", self.device_id] + pull_args
+                run_adb(pull_args)
+
+                if os.path.exists(local_path):
+                    with open(local_path, 'r', encoding='utf-8') as f:
+                        return f.read()
+            except Exception as e:
+                logger.error(f"dump_ui_hierarchy failed: {e}")
+            return None
+
+        return self.u2.dump_hierarchy()
 
 
 # =============================================================================

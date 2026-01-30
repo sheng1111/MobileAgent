@@ -2,7 +2,25 @@
   "_comment": "MobileAgent MCP Configuration Example - Copy to your AI Agent settings",
   "_usage": "Replace <PROJECT_PATH> with your actual project path, e.g., /home/user/MobileAgent",
   "mcpServers": {
+    "mobile-macro": {
+      "_comment": "RECOMMENDED: High-level macro tools for faster, more reliable automation",
+      "command": "python",
+      "args": ["-m", "src.mcp_macro_server"],
+      "cwd": "<PROJECT_PATH>",
+      "_tools": [
+        "find_and_click - Element search + click + verify in one call",
+        "type_and_submit - Focus + type + submit in one call",
+        "smart_wait - Wait for element with native u2 wait",
+        "scroll_and_find - Auto-scroll until element found",
+        "navigate_back - Back + verify navigation",
+        "dismiss_popup - Dismiss common dialogs",
+        "launch_and_wait - Launch app + wait for ready",
+        "get_screen_summary - Screen state overview",
+        "run_patrol - Complete social media browsing automation"
+      ]
+    },
     "mobile-mcp": {
+      "_comment": "Low-level MCP tools (use mobile-macro for most tasks)",
       "command": "npx",
       "args": ["-y", "@mobilenext/mobile-mcp@latest"]
     },
@@ -23,23 +41,32 @@
       "args": ["-y", "@upstash/context7-mcp"]
     }
   },
-  "_optional_uiautomator2": {
-    "_comment": "Optional: Add uiautomator2 MCP server for precise element-based automation",
+  "_uiautomator2_integration": {
+    "_comment": "RECOMMENDED: Install uiautomator2 Python library for selector-based automation",
     "_benefits": [
-      "click by text/resourceId/description (no coordinate guessing)",
-      "wait_for_element (reduces timing errors)",
-      "scroll_to (auto-scroll to element)",
-      "dump_hierarchy (full UI tree XML)"
+      "click_by_text('Search') - no coordinate guessing, most reliable",
+      "click_by_id('com.app:id/btn') - stable across screen sizes",
+      "wait_for_element(text='Loading', gone=True) - smart waiting",
+      "scroll_to(text='Settings') - auto-scroll to find element",
+      "type_into_element('query', resourceId='search_input') - direct input"
     ],
-    "_setup": "pip install mcp-android-server && ensure device connected via adb",
-    "mcp-android": {
-      "command": "python",
-      "args": ["-m", "mcp_android_server"]
-    }
+    "_setup": [
+      "1. pip install uiautomator2",
+      "2. python -m uiautomator2 init  (install ATX agent to device)",
+      "3. ToolRouter will auto-detect and use u2 when available"
+    ],
+    "_usage_in_code": [
+      "from src.tool_router import ToolRouter",
+      "router = ToolRouter()  # Auto-detects u2",
+      "router.click(text='Search')  # Uses u2 if available",
+      "router.click_by_selector(text='Login', clickable=True)  # Direct u2 call",
+      "router.wait_for_element_u2(text='Results', timeout=10)"
+    ]
   },
-  "_alternative_uiautomator2": {
-    "_comment": "Alternative: tanbro/uiautomator2-mcp-server (GPL-3.0 license)",
+  "_optional_u2_mcp_server": {
+    "_comment": "Alternative: uiautomator2 MCP server (coordinate-based, less features than Python lib)",
     "_setup": "uvx uiautomator2-mcp-server",
+    "_note": "Python library (pip install uiautomator2) is recommended over MCP server",
     "uiautomator2": {
       "command": "uvx",
       "args": ["uiautomator2-mcp-server"]

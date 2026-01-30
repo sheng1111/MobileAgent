@@ -39,6 +39,26 @@ logger = get_logger(__name__)
 
 
 # =============================================================================
+# Helper Functions
+# =============================================================================
+
+def _to_bool(value) -> bool:
+    """Convert various representations to bool.
+
+    Handles: bool, "true"/"false", "True"/"False", 1/0, "1"/"0", None
+    """
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.lower() in ('true', '1', 'yes')
+    return bool(value)
+
+
+# =============================================================================
 # Data Classes
 # =============================================================================
 
@@ -124,10 +144,10 @@ class ScreenState:
                 element_type=el.get('type', el.get('class', el.get('className', ''))),
                 identifier=el.get('identifier', el.get('resourceId', el.get('resource-id', ''))),
                 bounds=bounds,
-                clickable=el.get('clickable', 'true' if el.get('clickable') == 'true' else False),
-                scrollable=el.get('scrollable', 'true' if el.get('scrollable') == 'true' else False),
-                focusable=el.get('focusable', False),
-                enabled=el.get('enabled', True),
+                clickable=_to_bool(el.get('clickable')),
+                scrollable=_to_bool(el.get('scrollable')),
+                focusable=_to_bool(el.get('focusable')),
+                enabled=_to_bool(el.get('enabled', True)),
                 raw=el
             ))
 
@@ -265,7 +285,8 @@ class DeterministicExecutor:
     """
 
     def __init__(self, device_id: str = None, max_retries: int = 3,
-                 verify_timeout: float = 3.0, action_delay: float = 0.5):
+                 verify_timeout: float = 3.0, action_delay: float = 0.5,
+                 save_debug_on_failure: bool = True):
         """
         Initialize executor.
 
@@ -274,16 +295,22 @@ class DeterministicExecutor:
             max_retries: Maximum retries for failed actions
             verify_timeout: Timeout for verification (seconds)
             action_delay: Delay between action and verification (seconds)
+            save_debug_on_failure: Save screenshot + element dump on action failure
         """
         self.adb = ADBHelper(device_id)
         self.device_id = device_id or self.adb.device_id
         self.max_retries = max_retries
         self.verify_timeout = verify_timeout
         self.action_delay = action_delay
+        self.save_debug_on_failure = save_debug_on_failure
 
         self.last_state: Optional[ScreenState] = None
         self.state_history: List[ScreenState] = []
         self._mcp_callback: Optional[Callable] = None
+
+        # Debug artifacts directory
+        self.debug_dir = os.path.join(PROJECT_ROOT, "temp", "debug")
+        os.makedirs(self.debug_dir, exist_ok=True)
 
         logger.info(f"Executor initialized for device: {self.device_id}")
 
@@ -350,7 +377,10 @@ class DeterministicExecutor:
             return ScreenState(elements=[], timestamp=time.time(), screen_hash="error")
 
         # Pull dump file
-        ok, _ = run_adb(["pull", dump_path, local_path])
+        pull_args = ["pull", dump_path, local_path]
+        if self.device_id:
+            pull_args = ["-s", self.device_id] + pull_args
+        ok, _ = run_adb(pull_args)
         if not ok or not os.path.exists(local_path):
             logger.error("Failed to pull dump file")
             return ScreenState(elements=[], timestamp=time.time(), screen_hash="error")
@@ -370,6 +400,87 @@ class DeterministicExecutor:
         # Keep only last 20 states
         if len(self.state_history) > 20:
             self.state_history = self.state_history[-20:]
+
+    def _save_debug_artifacts(self, action: str, error_msg: str,
+                               state: ScreenState = None, target: Any = None):
+        """
+        Save debug artifacts on action failure.
+
+        Saves:
+        - screenshot.png: Current screen capture
+        - elements.json: Element tree dump
+        - info.json: Action details and error info
+
+        Args:
+            action: Action name (click, swipe, back, etc.)
+            error_msg: Error message
+            state: ScreenState at time of failure
+            target: Target element or coordinates
+        """
+        if not self.save_debug_on_failure:
+            return
+
+        try:
+            # Create timestamped directory
+            from datetime import datetime
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            artifact_dir = os.path.join(self.debug_dir, f"{timestamp}_{action}_failed")
+            os.makedirs(artifact_dir, exist_ok=True)
+
+            # Save screenshot
+            screenshot_path = os.path.join(artifact_dir, "screenshot.png")
+            self.adb.screenshot(screenshot_path)
+
+            # Save elements
+            elements_path = os.path.join(artifact_dir, "elements.json")
+            if state is None:
+                state = self.last_state
+            if state:
+                elements_data = []
+                for el in state.elements:
+                    elements_data.append({
+                        "text": el.text,
+                        "content_desc": el.content_desc,
+                        "type": el.element_type,
+                        "identifier": el.identifier,
+                        "bounds": el.bounds,
+                        "center": el.center,
+                        "clickable": el.clickable,
+                        "scrollable": el.scrollable,
+                    })
+                with open(elements_path, 'w', encoding='utf-8') as f:
+                    json.dump(elements_data, f, ensure_ascii=False, indent=2)
+
+            # Save info
+            info_path = os.path.join(artifact_dir, "info.json")
+            target_info = None
+            if target:
+                if isinstance(target, Element):
+                    target_info = {
+                        "type": "element",
+                        "text": target.text,
+                        "center": target.center,
+                        "identifier": target.identifier
+                    }
+                elif isinstance(target, tuple) and len(target) == 2:
+                    target_info = {"type": "coordinates", "x": target[0], "y": target[1]}
+
+            info_data = {
+                "timestamp": timestamp,
+                "action": action,
+                "error": error_msg,
+                "device_id": self.device_id,
+                "target": target_info,
+                "screen_hash": state.screen_hash if state else None,
+                "element_count": len(state.elements) if state else 0,
+            }
+            with open(info_path, 'w', encoding='utf-8') as f:
+                json.dump(info_data, f, ensure_ascii=False, indent=2)
+
+            logger.info(f"Debug artifacts saved: {artifact_dir}")
+
+        except Exception as e:
+            logger.warning(f"Failed to save debug artifacts: {e}")
 
     # =========================================================================
     # Element Finding Methods
@@ -456,6 +567,8 @@ class DeterministicExecutor:
         # Execute click
         ok, msg = tap(x, y, self.device_id)
         if not ok:
+            self._save_debug_artifacts("click", f"tap failed: {msg}",
+                                        before_state, target)
             return ExecutionResult(
                 result=ActionResult.ERROR,
                 before_state=before_state,
@@ -489,6 +602,8 @@ class DeterministicExecutor:
             time.sleep(0.5 * (attempt + 1))
 
         # Screen didn't change after retries
+        self._save_debug_artifacts("click", "screen did not change",
+                                    self.last_state, target)
         return ExecutionResult(
             result=ActionResult.NO_CHANGE,
             before_state=before_state,
@@ -571,6 +686,8 @@ class DeterministicExecutor:
         logger.info(f"Swipe {direction}: ({x1},{y1}) -> ({x2},{y2})")
         ok, msg = swipe(x1, y1, x2, y2, 300, self.device_id)
         if not ok:
+            self._save_debug_artifacts("swipe", f"swipe {direction} failed: {msg}",
+                                        before_state, (x1, y1))
             return ExecutionResult(
                 result=ActionResult.ERROR,
                 before_state=before_state,
@@ -621,6 +738,8 @@ class DeterministicExecutor:
         # Press back
         ok, msg = press_back(self.device_id)
         if not ok:
+            self._save_debug_artifacts("back", f"press_back failed: {msg}",
+                                        before_state)
             return ExecutionResult(
                 result=ActionResult.ERROR,
                 before_state=before_state,
@@ -648,6 +767,8 @@ class DeterministicExecutor:
 
             time.sleep(0.5 * (attempt + 1))
 
+        self._save_debug_artifacts("back", "screen did not change after back",
+                                    self.last_state)
         return ExecutionResult(
             result=ActionResult.NO_CHANGE,
             before_state=before_state,

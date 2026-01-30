@@ -1,27 +1,44 @@
 # MobileAgent - AI 驅動的手機自動化框架
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/sheng1111/MobileAgent)
+[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Node.js 18+](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](../LICENSE)
+[![MCP Compatible](https://img.shields.io/badge/MCP-Compatible-purple.svg)](https://modelcontextprotocol.io/)
+
 [English README](../README.md)
 
-透過 AI Agent 與 MCP (Model Context Protocol) 控制 Android 裝置的自動化框架。
+一個開源的自動化框架，透過 **AI Agent** 與 **MCP** (Model Context Protocol) 控制 **Android 裝置**。使用自然語言指令建構智慧型手機自動化工作流程。
 
-## 功能特色
+## 🌟 核心功能
 
-- Web UI - 網頁介面管理裝置與任務，支援繁中/英文
-- MCP 整合 - 支援 mobile-mcp、filesystem、fetch、context7 等 MCP 伺服器
-- AI Agent 相容 - 支援 Cursor、Claude Code、Gemini CLI、Codex、Windsurf、Roo Code
-- Skills 系統 - 統一的 Skills 來源，自動部署到偵測到的 AI Agents
-- 多模型支援 - Gemini、Claude、GPT 等最新模型
-- ADB 輔助腳本 - 當 MCP 工具受限時的備援方案
-- Unicode 輸入 - 透過 ADBKeyboard 支援中文、表情符號等
+### 基礎能力
+- **🤖 AI Agent 相容** - 支援 Cursor、Claude Code、Gemini CLI、Codex、Windsurf、Roo Code
+- **🔌 MCP 整合** - 支援 mobile-mcp、filesystem、fetch、context7 等 MCP 伺服器
+- **📱 多裝置支援** - 同時控制多台 Android 裝置
+- **🌐 Web UI** - 網頁介面管理裝置與任務，支援繁中/英文
+- **🎯 Skills 系統** - 統一的 Skills 來源，自動部署到偵測到的 AI Agents
+- **🔤 Unicode 輸入** - 透過 ADBKeyboard 支援中文、日文、表情符號
 
-## 系統需求
+### 進階自動化 (v2.0 新增)
+- **⚡ MCP Macro 伺服器** - 高階工具，更快更可靠的自動化
+- **🎯 uiautomator2 整合** - 基於選擇器的操作，無需猜測座標
+- **🔄 平台適配器** - 統一介面支援 Threads、Instagram、X、TikTok、YouTube、Facebook
+- **🔍 Element-First 策略** - 優先使用元素樹，而非截圖，提升速度與準確度
+- **✅ Click-Verify 協議** - 每次動作都驗證是否成功
+- **🐛 除錯工件** - 動作失敗時自動儲存截圖與元素樹
+
+## 📋 系統需求
 
 - Python 3.8+
 - Node.js 18+
 - Android SDK Platform Tools (ADB)
 - Android 裝置（已啟用 USB 偵錯）
 
-## 快速開始
+### 選用（推薦）
+- [uiautomator2](https://github.com/openatx/uiautomator2) - 基於選擇器的自動化
+
+## 🚀 快速開始
 
 ### 1. 執行設定腳本
 
@@ -30,69 +47,142 @@ chmod +x set.sh && ./set.sh
 ```
 
 這會自動：
+- 檢查相依套件（Python 3.8+、Node.js 18+、ADB）
 - 建立 Python 虛擬環境並安裝相依套件
-- 設定各 AI CLI 工具的 MCP 設定
+- 安裝 uiautomator2（若有裝置連接，也會初始化 ATX agent）
+- 設定各 AI CLI 工具的 MCP 設定（Gemini、Claude、Codex）
 - 驗證並部署 Skills 到偵測到的 AI Agents
+- 建立必要目錄（`outputs/`、`temp/logs/`）
 
-### 2. 驗證環境
-
-```bash
-python tests/test_environment.py
-```
-
-### 3. 設定 AI Agent
-
-將 `mcp/mcp_setting.json` 複製到你的 AI Agent 設定中。
-
-### 4. 連接裝置
+### 2. 連接裝置並開始使用
 
 ```bash
-adb devices
+adb devices                    # 確認裝置連接
+source .venv/bin/activate      # 啟動虛擬環境
 ```
 
-## 專案結構
+完成！現在可以開始使用 MobileAgent 搭配你的 AI Agent。
+
+## 📁 專案結構
 
 ```
 MobileAgent/
-├── AGENTS.md           # AI Agent 使用指南（必讀）
-├── CLAUDE.md           # Claude Code 參考
-├── GEMINI.md           # Gemini CLI 參考
-├── set.sh              # 設定腳本（含 Skills 部署）
-├── .skills/            # Skills 來源目錄
-│   ├── app-explore/    # 主要技能：App 操作 + 研究思維
-│   ├── app-action/     # 快速單步操作
-│   ├── patrol/         # 海巡技能（搜尋關鍵字、監控輿情）
-│   ├── content-extract/# 完整內容擷取 + NLP 分析
-│   ├── device-check/   # 裝置連線檢查
-│   ├── screen-analyze/ # 畫面狀態分析
-│   ├── troubleshoot/   # 問題診斷
-│   └── unicode-setup/  # Unicode 輸入設定
-├── src/                # Python 模組
-│   ├── adb_helper.py   # ADB 指令封裝
-│   ├── logger.py       # 日誌模組
-│   ├── executor.py     # 確定性執行器（Element-First 強制）
-│   ├── tool_router.py  # 統一 MCP/ADB 介面
-│   ├── state_tracker.py # 導航狀態機
-│   └── patrol.py       # 海巡自動化（程式化使用）
-├── web/                # Web UI
-│   ├── app.py          # Flask 後端
-│   ├── static/         # CSS/JS
-│   └── templates/      # HTML
-├── tests/              # 單元測試
-├── mcp/                # MCP 設定
-├── apk_tools/          # APK 工具
-├── outputs/            # 截圖、下載、摘要
-└── temp/logs/          # 日誌檔案
+├── AGENTS.md              # AI Agent 行為準則（必讀）
+├── GEMINI.md              # Gemini CLI 快速參考
+├── CLAUDE.md              # Claude Code 快速參考
+├── set.sh                 # 設定腳本（含 Skills 部署）
+│
+├── src/                   # Python 模組
+│   ├── adb_helper.py      # ADB 指令封裝
+│   ├── executor.py        # 確定性執行器（Element-First 強制）
+│   ├── tool_router.py     # 統一 MCP/ADB/u2 介面
+│   ├── u2_driver.py       # uiautomator2 選擇器操作
+│   ├── mcp_macro_server.py # 高階 MCP 巨集工具
+│   ├── platform_adapter.py # 多平台統一介面
+│   ├── state_tracker.py   # 導航狀態機
+│   ├── patrol.py          # 社群媒體海巡自動化
+│   └── logger.py          # 日誌模組
+│
+├── .skills/               # Skills 來源目錄
+│   ├── app-explore/       # 主要技能：App 操作 + 研究思維
+│   ├── app-action/        # 快速單步操作
+│   ├── patrol/            # 海巡技能（搜尋關鍵字、監控輿情）
+│   ├── content-extract/   # 完整內容擷取 + NLP 分析
+│   ├── device-check/      # 裝置連線檢查
+│   ├── screen-analyze/    # 畫面狀態分析
+│   ├── troubleshoot/      # 問題診斷
+│   └── unicode-setup/     # Unicode 輸入設定
+│
+├── web/                   # Web UI
+│   ├── app.py             # Flask 後端
+│   ├── static/            # CSS/JS
+│   └── templates/         # HTML 模板
+│
+├── mcp/                   # MCP 設定
+├── apk_tools/             # APK 工具（DeviceKit、ADBKeyboard）
+├── tests/                 # 單元測試
+├── outputs/               # 截圖、下載、海巡報告
+└── temp/logs/             # 日誌檔案
 ```
 
-## Skills 系統
+## 🛠️ MCP Macro 伺服器
+
+新的 **mobile-macro** MCP 伺服器提供高階自動化工具，將多個步驟整合成單一操作，減少 LLM 來回次數，提升可靠性。
+
+### 可用工具
+
+| 工具 | 說明 |
+|------|------|
+| `find_and_click` | 元素搜尋 + 點擊 + 驗證，一次完成 |
+| `type_and_submit` | 聚焦 + 輸入 + 送出，一次完成 |
+| `smart_wait` | 使用原生 u2 等待元素 |
+| `scroll_and_find` | 自動滾動直到找到元素 |
+| `navigate_back` | 返回 + 驗證導航 |
+| `dismiss_popup` | 關閉常見對話框（確定、取消、關閉等） |
+| `launch_and_wait` | 啟動 App + 等待就緒指示 |
+| `get_screen_summary` | 畫面狀態概覽，含可見文字 |
+| `run_patrol` | 完整的社群媒體瀏覽自動化 |
+
+### 設定方式
+
+加入到你的 MCP 設定：
+
+```json
+{
+  "mcpServers": {
+    "mobile-macro": {
+      "command": "python",
+      "args": ["-m", "src.mcp_macro_server"],
+      "cwd": "<專案路徑>"
+    }
+  }
+}
+```
+
+## 🎯 uiautomator2 整合
+
+要獲得最可靠的自動化體驗，請安裝 uiautomator2：
+
+```bash
+pip install uiautomator2
+python -m uiautomator2 init
+```
+
+### 優勢比較
+
+| 操作 | 座標式 | 選擇器式 (u2) |
+|------|--------|---------------|
+| 點擊按鈕 | `router.click(x=540, y=1200)` | `router.click(text="搜尋")` |
+| 尋找元素 | 截圖 + 視覺辨識 | 直接選擇器查詢 |
+| 等待元素 | 輪詢截圖 | 原生等待支援 |
+| 穩定性 | 依賴螢幕尺寸 | 跨裝置通用 |
+
+### 程式碼使用
+
+```python
+from src.tool_router import ToolRouter
+
+router = ToolRouter()  # 自動偵測 u2
+
+# 選擇器式點擊（最可靠）
+router.click(text="搜尋")
+router.click_by_selector(resourceId="com.app:id/btn", clickable=True)
+
+# 智慧等待
+router.wait_for_element_u2(text="載入中", gone=True, timeout=10)
+
+# 滾動尋找
+found, el = router.scroll_to_element(text="設定", max_scrolls=5)
+```
+
+## 🎓 Skills 系統
 
 MobileAgent 使用統一的 Skills 來源目錄 (`.skills/`)，執行 `set.sh` 時會自動偵測已安裝的 AI Agents 並部署對應的 skills。
 
 ### 支援的 AI Agents
 
 | AI Agent | 偵測方式 | 部署路徑 |
-|----------|---------|---------|
+|----------|---------|---------| 
 | Cursor | `~/.cursor/` 存在 | `.cursor/skills/` |
 | Claude Code | `claude` 指令或 `~/.claude/` | `.claude/skills/` |
 | Gemini CLI | `gemini` 指令或 `~/.gemini/` | `.gemini/skills/` |
@@ -108,7 +198,7 @@ MobileAgent 使用統一的 Skills 來源目錄 (`.skills/`)，執行 `set.sh` �
 
 詳細說明請參閱 `.skills/README.md`。
 
-### 海巡技能 (Patrol Skill)
+### 🏄 海巡技能 (Patrol Skill)
 
 像海巡署查緝走私一樣，**主動搜尋**特定關鍵字，**緊盯**相關貼文，**收集情報**回報給用戶。
 
@@ -126,28 +216,39 @@ AI Agent 會：
 
 AI Agent 會自主執行 MCP 工具，內部追蹤已訪問的貼文，避免重複。
 
-### 內容擷取技能 (Content Extract Skill)
+### 📄 內容擷取技能 (Content Extract Skill)
 
 擷取**完整內容**（非摘要）並進行結構化 NLP 分析：
 
 - **完整文字擷取**：完整文章內容，不截斷
 - **NLP 分析**：人（人物）、事（事件）、時（時間）、地（地點）、物（事物/產品）
-- **關鍵字**：主要詞彙和主題
-- **儲存檔案**：JSON 和/或 Markdown 格式，存放於 `outputs/` 目錄
+- **關鍵字**：主要詞彙和主題，含信心分數
+- **JSON 輸出**：標準化 Schema，便於 API 串接
+- **儲存檔案**：JSON（主要）和 Markdown（次要），存放於 `outputs/` 目錄
 
-使用範例：
+JSON 輸出結構範例：
+```json
+{
+  "extraction_meta": {
+    "version": "2.0",
+    "extracted_at": "2024-01-29T10:30:00+08:00",
+    "platform": "WeChat",
+    "extraction_status": "success"
+  },
+  "articles": [{
+    "title": "文章標題",
+    "content": { "full_text": "...", "word_count": 342 },
+    "nlp_analysis": {
+      "who": [{ "value": "人名", "confidence": 0.95 }],
+      "what": [{ "value": "事件描述", "confidence": 0.90 }]
+    },
+    "keywords": ["AI", "科技"],
+    "sentiment": "positive"
+  }]
+}
 ```
-用戶：「看微信公眾號 36氪 的最新文章，提取完整內容，分析人事時地物」
 
-AI Agent 會：
-1. 導航到微信公眾號
-2. 找到並開啟文章
-3. 滾動並擷取完整內容
-4. 進行 NLP 分析（人/事/時/地/物）
-5. 儲存結構化輸出到 outputs/2024-01-29/wechat_36kr_article.json
-```
-
-### App 探索技能 (App Explore Skill)
+### 📱 App 探索技能 (App Explore Skill)
 
 主要的 App 操作技能，帶有研究思維：
 
@@ -164,7 +265,7 @@ AI Agent 會：
 - 分離式 UI 參考檔，按需載入節省 tokens
 - 多語言 UI 關鍵字對照（EN/zh/JP/KR）
 
-## Web UI
+## 🖥️ Web UI
 
 啟動網頁控制面板：
 
@@ -196,7 +297,9 @@ python web/app.py
 | ![執行中](images/webui-with-device.png) | ![完成](images/webui-task-completed.png) |
 | 即時輸出搭配裝置畫面 | 查看結果與任務摘要 |
 
-## 使用範例
+## 💻 使用範例
+
+### Python API
 
 ```python
 from src.adb_helper import ADBHelper
@@ -208,7 +311,50 @@ adb.type_text("搜尋關鍵字")
 adb.press_enter()
 ```
 
-## 常見問題
+### 確定性執行器
+
+```python
+from src.executor import DeterministicExecutor
+
+executor = DeterministicExecutor()
+
+# 觀察 → 尋找 → 點擊 → 驗證
+state = executor.observe()
+element = executor.find_element(text="搜尋")
+if element:
+    result = executor.click_and_verify(element)
+    if result.result == ActionResult.SUCCESS:
+        print("點擊驗證成功！")
+```
+
+### Tool Router（統一介面）
+
+```python
+from src.tool_router import ToolRouter
+
+router = ToolRouter()
+
+# 自動選擇最佳工具（u2 > MCP > ADB）
+router.click(text="搜尋")           # 依文字尋找並點擊
+router.type_text("你好 Hello")      # 支援 Unicode
+router.swipe("up", verify=True)    # 滾動並驗證
+router.wait_for_element(text="結果")
+```
+
+### 海巡自動化
+
+```python
+from src.patrol import PatrolStateMachine, PatrolConfig
+
+config = PatrolConfig(max_posts=10, max_scrolls=5)
+patrol = PatrolStateMachine(platform="threads", config=config)
+report = patrol.run(keyword="AI agents")
+
+print(f"已訪問 {len(report.posts)} 篇貼文")
+print(report.summary)
+```
+
+## ❓ 常見問題
 
 ### Q: 無法連接裝置？
 
@@ -224,13 +370,27 @@ from src.adb_helper import setup_adbkeyboard
 setup_adbkeyboard()
 ```
 
+或安裝 DeviceKit APK（用於 MCP）：
+```bash
+adb install apk_tools/mobilenext-devicekit.apk
+```
+
 ### Q: 如何查看日誌？
 
 `temp/logs/mobile_agent_YYYYMMDD.log`
 
-## 授權
+### Q: 如何啟用 uiautomator2？
 
-本專案採用 [MIT License](LICENSE)。
+```bash
+pip install uiautomator2
+python -m uiautomator2 init
+```
+
+ToolRouter 會自動偵測並使用。
+
+## 📜 授權
+
+本專案採用 [MIT License](../LICENSE)。
 
 ### 相依工具授權
 
@@ -239,6 +399,18 @@ setup_adbkeyboard()
 | MCP (Model Context Protocol) | Open Source (Linux Foundation) | Anthropic 捐贈給 Agentic AI Foundation |
 | mobile-mcp | Apache-2.0 | MCP server for mobile automation |
 | context7 | MIT | 文件查詢 MCP server |
+| uiautomator2 | MIT | Android 自動化函式庫 |
 | ADB (Android Debug Bridge) | Apache-2.0 | Android SDK Platform Tools |
 | ADBKeyboard | GPL-2.0 | Unicode 輸入支援 |
 | Flask | BSD-3-Clause | Web UI 框架 |
+
+## 📧 聯繫
+
+- **問題回報**: [GitHub Issues](https://github.com/sheng1111/MobileAgent/issues)
+- **討論**: [GitHub Discussions](https://github.com/sheng1111/MobileAgent/discussions)
+
+---
+
+<p align="center">
+  <strong>以 ❤️ 為 AI Agent 社群打造</strong>
+</p>
