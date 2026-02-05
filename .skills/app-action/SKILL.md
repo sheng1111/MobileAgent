@@ -1,9 +1,28 @@
 ---
 name: app-action
-description: Quick single-step app operations. Launch, tap, type, swipe. For research or multi-step tasks, use app-explore skill instead.
+description: Quick single-step app operations like launch, tap, type, swipe. Use for simple actions. For research, browsing, or multi-step tasks, use app-explore skill instead.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "1.1"
+compatibility: Requires mobile-mcp MCP server and connected Android device
 ---
 
 # App Action Skill
+
+Quick reference for single-step operations.
+
+## When to Use This Skill
+
+- Simple, one-time actions (tap a button, launch an app)
+- Quick text input
+- Navigation (back, home, scroll)
+
+## When NOT to Use This Skill
+
+- User asks to find/research/compare something → use `app-explore`
+- Task requires browsing multiple items → use `app-explore`
+- Information gathering before reporting → use `app-explore`
 
 Quick reference for single-step operations. For research or complex multi-step tasks, use `app-explore` skill.
 

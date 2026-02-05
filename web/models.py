@@ -20,18 +20,28 @@ Command templates use placeholders:
 
 FINAL_ANSWER_INSTRUCTION = """
 
-[SYSTEM INSTRUCTION - OUTPUT FORMAT]
-When you complete the task, you MUST output your final result in this exact format:
+[SYSTEM INSTRUCTION]
+
+## Memory (IMPORTANT)
+Use the memory skill to record observations during task execution:
+- Read .memory/MEMORY.md first for existing knowledge
+- Write observations to .memory/tasks/<task_id>.md as you work
+- Update .memory/MEMORY.md with reusable learnings at task end
+This prevents losing context and helps future tasks.
+
+## Output Format
+When you complete the task, output your final result in this exact format:
 <<FINAL_ANSWER>>
 Your final answer or result here (be concise but complete)
 <<END_FINAL_ANSWER>>
 
-Rules:
-1. LANGUAGE: Respond in the SAME language as the user's task. If user's task is in Chinese, reply in Chinese. If in English, reply in English.
-2. If the task was completed successfully, describe the result.
-3. If the task failed, output: TASK_FAILED: <reason>
-4. If asking the user a question or needing clarification, output: AWAITING_INPUT: <your question>
-5. Always include this block at the END of your response, after all actions are done.
+## Rules
+1. LANGUAGE: Respond in the SAME language as the user's task.
+2. If successful, describe the result.
+3. If failed, start with: TASK_FAILED: <reason>
+4. If need clarification, start with: AWAITING_INPUT: <question>
+5. Include this block at the END after all actions are done.
+
 [END SYSTEM INSTRUCTION]
 """
 
@@ -44,8 +54,10 @@ CLI_TOOLS = {
     "gemini": {
         "name": "Gemini CLI",
         "command": 'gemini -m {model} -p "{prompt}" --yolo',
+        "command_default": 'gemini -p "{prompt}" --yolo',
         "models": [
-            {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "default": True},
+            {"id": "", "name": "預設 (CLI 自動選擇)", "default": True},
+            {"id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash"},
             {"id": "gemini-2.5-pro", "name": "Gemini 2.5 Pro"},
             {"id": "gemini-2.5-flash-lite", "name": "Gemini 2.5 Flash-Lite"},
             {"id": "gemini-3-flash-preview", "name": "Gemini 3 Flash (Preview)"},
@@ -55,17 +67,21 @@ CLI_TOOLS = {
     "claude": {
         "name": "Claude Code",
         "command": 'claude --model {model} -p "{prompt}" --dangerously-skip-permissions',
+        "command_default": 'claude -p "{prompt}" --dangerously-skip-permissions',
         "models": [
-            {"id": "sonnet", "name": "Claude Sonnet 4.5", "default": True},
+            {"id": "", "name": "預設 (CLI 自動選擇)", "default": True},
+            {"id": "sonnet", "name": "Claude Sonnet 4.5"},
             {"id": "opus", "name": "Claude Opus 4.5"},
             {"id": "haiku", "name": "Claude Haiku 4.5"},
         ]
     },
     "codex": {
         "name": "OpenAI Codex",
-        "command": 'codex -m {model} "{prompt}"',
+        "command": 'codex exec -m {model} --full-auto --skip-git-repo-check "{prompt}"',
+        "command_default": 'codex exec --full-auto --skip-git-repo-check "{prompt}"',
         "models": [
-            {"id": "gpt-5.1-codex", "name": "GPT-5.1 Codex", "default": True},
+            {"id": "", "name": "預設 (CLI 自動選擇)", "default": True},
+            {"id": "gpt-5.1-codex", "name": "GPT-5.1 Codex"},
             {"id": "gpt-5.1-codex-max", "name": "GPT-5.1 Codex Max"},
             {"id": "gpt-5.2-codex", "name": "GPT-5.2 Codex"},
             {"id": "codex-mini-latest", "name": "Codex Mini"},
@@ -93,13 +109,13 @@ def get_cli_options():
 
 
 def get_default_model(cli_tool):
-    """Get the default model for a CLI tool."""
+    """Get the default model for a CLI tool. Returns empty string for 'CLI auto-select'."""
     if cli_tool not in CLI_TOOLS:
         return None
 
     for model in CLI_TOOLS[cli_tool]["models"]:
         if model.get("default"):
-            return model["id"]
+            return model["id"]  # May be empty string for default option
 
     # Return first model if no default specified
     if CLI_TOOLS[cli_tool]["models"]:
@@ -118,11 +134,12 @@ def build_command(cli_tool, model, prompt):
         return f'{cli_tool} "{prompt}"'
 
     tool_config = CLI_TOOLS[cli_tool]
-    command_template = tool_config["command"]
 
-    # Use default model if not specified
+    # Use command_default template when model is empty or not specified
     if not model:
-        model = get_default_model(cli_tool)
+        command_template = tool_config.get("command_default", tool_config["command"])
+    else:
+        command_template = tool_config["command"]
 
     # Append final answer instruction to prompt
     enhanced_prompt = prompt + FINAL_ANSWER_INSTRUCTION
@@ -130,13 +147,21 @@ def build_command(cli_tool, model, prompt):
     # Escape quotes in prompt for shell safety
     enhanced_prompt = enhanced_prompt.replace('"', '\\"')
 
-    return command_template.format(model=model, prompt=enhanced_prompt)
+    # Format command (model may be empty for default commands)
+    if model:
+        return command_template.format(model=model, prompt=enhanced_prompt)
+    else:
+        return command_template.format(prompt=enhanced_prompt)
 
 
 def validate_model(cli_tool, model):
-    """Check if a model is valid for the given CLI tool."""
+    """Check if a model is valid for the given CLI tool. Empty string is valid (CLI default)."""
     if cli_tool not in CLI_TOOLS:
         return False
+
+    # Empty string means use CLI default, always valid
+    if model == "":
+        return True
 
     model_ids = [m["id"] for m in CLI_TOOLS[cli_tool]["models"]]
     return model in model_ids

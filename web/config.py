@@ -43,4 +43,5 @@ DEFAULT_LANGUAGE = "zh-TW"
 MAX_TASK_HISTORY = 100
 
 # Task output max length (characters) to store in database
-MAX_OUTPUT_LENGTH = 100000
+# Increased to 500KB to avoid truncating long tasks
+MAX_OUTPUT_LENGTH = 500000

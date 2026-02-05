@@ -168,8 +168,43 @@ print(report.summary)
 - Decision principles and obstacle handling
 - Content extraction and output format
 
+## Skills System
+
+Skills are specialized workflows for common tasks. Use `/skill-name` to invoke.
+
+### Skill Categories
+
+| Category | Skills | Purpose |
+|----------|--------|---------|
+| **Planning** | `task-clarify`, `progress-report` | Convert requests to specs, report progress |
+| **Search** | `search-triage`, `comment-scan`, `patrol` | Multi-round search, analyze comments |
+| **Content** | `article-extract`, `wechat-browse` | Extract articles, browse WeChat (JSON output) |
+| **Commenting** | `comment-draft`, `comment-post` | Generate and post comments |
+| **Memory** | `memory` | Record observations and learnings during task execution |
+| **Utility** | `app-action`, `screen-analyze`, `device-check`, `troubleshoot`, `unicode-setup` | Quick operations, diagnostics |
+
+### Common Workflows
+
+**Search for opinions on Threads:**
+```
+task-clarify → search-triage → comment-scan → progress-report
+```
+
+**Browse WeChat Official Accounts:**
+```
+wechat-browse → article-extract (JSON for dedup)
+```
+
+**Quick patrol:**
+```
+patrol (automated)
+```
+
+See `.skills/README.md` for detailed skill selection guide.
+
 ## See Also
 
 - `AGENTS.md` - Agent behavioral guidelines (MUST READ for device tasks)
-- `.skills/` - Task-specific skills
+- `.skills/README.md` - Skills overview and selection guide
+- `docs/MCP_TOOLS_MAPPING.md` - MCP tools to skills mapping
 - `README.md` - Full project documentation

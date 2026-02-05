@@ -36,6 +36,10 @@ mcp/mcp_setting.json
 outputs/*
 !outputs/README.md
 
+# Memory (keep MEMORY.md for shared knowledge, ignore task-specific memories)
+.memory/tasks/*.md
+!.memory/tasks/.gitkeep
+
 # Temp files
 temp/
 

@@ -1,6 +1,11 @@
 ---
 name: content-extract
-description: Extract full content from articles/posts with structured NLP analysis (who, what, when, where, objects). Output as JSON for easy integration. Save to file. Use when user wants complete content, not just summaries.
+description: Extract complete article content (not summaries) with structured NLP analysis. Identifies who, what, when, where, and objects. Outputs JSON for API integration. Use when user wants full text extraction with analysis.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "2.0"
+compatibility: Requires mobile-mcp MCP server and connected Android device. Outputs saved to outputs/ directory.
 ---
 
 # Content Extract Skill - Full Content + NLP Analysis

@@ -1,9 +1,23 @@
 ---
 name: device-check
-description: Check device connection, ADB status, device info. Use before automation or when connection issues occur.
+description: Check device connection, ADB status, and device info. Use before starting automation, when connection issues occur, or when user asks about device status.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "1.1"
+compatibility: Requires ADB installed and Android device with USB debugging enabled
 ---
 
 # Device Check Skill
+
+Verify device connectivity and readiness before automation tasks.
+
+## When to Use This Skill
+
+- Before starting any automation workflow
+- When encountering connection errors
+- When user asks "Is my device connected?"
+- After device disconnection/reconnection
 
 ## Quick Check
 

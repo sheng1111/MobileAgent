@@ -177,26 +177,41 @@ found, el = router.scroll_to_element(text="設定", max_scrolls=5)
 
 ## 🎓 Skills 系統
 
-MobileAgent 使用統一的 Skills 來源目錄 (`.skills/`)，執行 `set.sh` 時會自動偵測已安裝的 AI Agents 並部署對應的 skills。
+MobileAgent 採用開放的 [Agent Skills 規範](https://agentskills.io) 來定義 AI 代理能力。Skills 存放於 `.skills/` 目錄，執行 `set.sh` 時會自動部署到偵測到的 AI Agents。
+
+### Agent Skills 標準
+
+每個 skill 遵循規範，包含正確的 frontmatter：
+
+```yaml
+---
+name: skill-name
+description: 功能說明與使用時機
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "1.0"
+---
+```
 
 ### 支援的 AI Agents
 
-| AI Agent | 偵測方式 | 部署路徑 |
-|----------|---------|---------| 
-| Cursor | `~/.cursor/` 存在 | `.cursor/skills/` |
-| Claude Code | `claude` 指令或 `~/.claude/` | `.claude/skills/` |
-| Gemini CLI | `gemini` 指令或 `~/.gemini/` | `.gemini/skills/` |
-| Codex CLI | `codex` 指令或 `~/.codex/` | `.codex/skills/` |
-| Windsurf | `~/.codeium/` 存在 | `.windsurf/skills/` |
-| Roo Code | `~/.roo/` 存在 | `.roo/skills/` |
+| AI Agent | Skills 目錄 | MCP 配置 |
+|----------|------------|----------|
+| Cursor | `.cursor/skills/` | `.cursor/mcp.json` |
+| Claude Code | `.claude/skills/` | `.mcp.json` |
+| Gemini CLI | `.gemini/skills/` | `.gemini/settings.json` |
+| Codex CLI | `.codex/skills/` | `.codex/config.toml` |
+| Roo Code | `.roo/skills/` | `.roo/mcp.json` |
+| Windsurf | `.windsurf/skills/` | 僅全域配置 |
 
 ### 新增 Skill
 
 1. 在 `.skills/` 下建立新目錄
-2. 建立 `SKILL.md` 檔案（含 frontmatter）
+2. 建立 `SKILL.md` 檔案（含正確的 frontmatter）
 3. 執行 `./set.sh` 驗證並部署
 
-詳細說明請參閱 `.skills/README.md`。
+詳細的 Agent Skills 規範與範例請參閱 `.skills/README.md`。
 
 ### 🏄 海巡技能 (Patrol Skill)
 

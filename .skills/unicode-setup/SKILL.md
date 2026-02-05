@@ -1,9 +1,23 @@
 ---
 name: unicode-setup
-description: Setup Unicode text input (Chinese, Japanese, Korean). Install DeviceKit for MCP, ADBKeyboard for Python.
+description: Setup Unicode text input for Chinese, Japanese, Korean, and emoji. Install DeviceKit for MCP tools or ADBKeyboard for Python scripts. Use when text input fails or shows garbled characters.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "1.1"
+compatibility: Requires ADB and Android device. APK files in apk_tools/ directory.
 ---
 
 # Unicode Setup Skill
+
+Configure Unicode text input support for non-ASCII characters.
+
+## When to Use This Skill
+
+- Text input shows garbled characters or question marks
+- Need to type Chinese, Japanese, Korean, or emoji
+- Setting up a new device for automation
+- `mobile_type_keys` fails with Unicode text
 
 ## Why Needed
 

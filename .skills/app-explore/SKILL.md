@@ -1,6 +1,11 @@
 ---
 name: app-explore
-description: Operate Android apps via MCP tools and ADB. Research mindset - browse multiple sources before concluding. Supports action reasoning with Observe-Think-Act-Verify loop.
+description: Operate Android apps via MCP tools with a research mindset. Browse multiple sources, read content thoroughly, and form conclusions based on evidence. Use for any task requiring app exploration, research, or multi-step operations.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "2.0"
+compatibility: Requires mobile-mcp MCP server, connected Android device, and target app installed
 ---
 
 # App Explore Skill

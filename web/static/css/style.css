@@ -403,6 +403,15 @@ textarea.form-control {
     color: #a78bfa;
 }
 
+.output-content .output-tool {
+    color: #22d3ee;
+}
+
+.output-content .output-dim {
+    color: #6b7280;
+    opacity: 0.8;
+}
+
 /* =============================================================================
    Final Answer Display
    ============================================================================= */

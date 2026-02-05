@@ -127,13 +127,14 @@
                                     <th data-i18n="device">Device</th>
                                     <th data-i18n="prompt">Prompt</th>
                                     <th data-i18n="status">Status</th>
+                                    <th data-i18n="duration">Duration</th>
                                     <th data-i18n="created">Created</th>
                                     <th data-i18n="actions">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="taskHistoryBody">
                                 <tr id="noTasksRow">
-                                    <td colspan="6" class="text-center text-muted py-4" data-i18n="noTasks">No tasks yet
+                                    <td colspan="7" class="text-center text-muted py-4" data-i18n="noTasks">No tasks yet
                                     </td>
                                 </tr>
                             </tbody>
@@ -218,9 +219,12 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
+                    <div class="mb-3 d-flex align-items-center">
                         <span class="badge" id="outputStatusBadge">--</span>
                         <span class="ms-2 text-muted small" id="outputTaskId">--</span>
+                        <span class="ms-auto text-muted small" id="outputDuration">
+                            <i class="fas fa-clock me-1"></i><span id="outputDurationValue">--</span>
+                        </span>
                     </div>
                     <pre class="output-content" id="outputContent">No output yet</pre>
                     <!-- Final Answer Display -->

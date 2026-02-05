@@ -1,8 +1,35 @@
 #!/bin/bash
 # MobileAgent Setup Script
 # Sets up Python virtual environment, MCP configuration, and deploys Skills to detected AI Agents
+#
+# Usage:
+#   ./set.sh           # Normal setup (symlinks for skills)
+#   ./set.sh --copy    # Force copy mode for skills
+#   MOBILE_AGENT_FORCE_COPY=1 ./set.sh  # Alternative force copy
 
 set -e
+
+# Parse command line arguments
+for arg in "$@"; do
+    case $arg in
+        --copy)
+            export MOBILE_AGENT_FORCE_COPY=true
+            echo "Force copy mode enabled"
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: ./set.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --copy    Force copy mode for skills deployment (instead of symlinks)"
+            echo "  --help    Show this help message"
+            echo ""
+            echo "Environment variables:"
+            echo "  MOBILE_AGENT_FORCE_COPY=1    Force copy mode"
+            exit 0
+            ;;
+    esac
+done
 
 # Color definitions
 RED='\033[0;31m'
@@ -165,18 +192,26 @@ echo -e "${GREEN}[OK]${NC} MCP configuration generated: ${MCP_CONFIG}"
 echo ""
 
 # =============================================================================
-# Auto-configure MCP for AI CLI Tools
+# Auto-configure MCP for AI Agents (Project-Level Only)
 # =============================================================================
-echo -e "${YELLOW}Configuring MCP for AI CLI tools...${NC}"
+echo -e "${YELLOW}Configuring MCP for AI Agents (project-level)...${NC}"
 echo ""
 
 if ! command -v jq &> /dev/null; then
-    echo -e "${YELLOW}[SKIP]${NC} jq not found - skipping auto-configuration"
+    echo -e "${YELLOW}[SKIP]${NC} jq not found - skipping JSON config auto-configuration"
     echo "       Install jq to enable auto-configuration: sudo apt install jq"
     echo ""
+    JQ_AVAILABLE=false
 else
-    # Gemini CLI MCP format
-    GEMINI_MCP_SERVERS=$(cat << EOF
+    JQ_AVAILABLE=true
+fi
+
+# -----------------------------------------------------------------------------
+# 定義通用 MCP Servers 配置
+# -----------------------------------------------------------------------------
+
+# Cursor / Roo Code MCP 格式（標準 JSON）
+STANDARD_MCP_SERVERS=$(cat << EOF
 {
   "mobile-mcp": {
     "command": "npx",
@@ -198,8 +233,8 @@ else
 EOF
 )
 
-    # Claude Code MCP format (requires type: "stdio")
-    CLAUDE_MCP_SERVERS=$(cat << EOF
+# Claude Code MCP 格式（需要 type: "stdio"）
+CLAUDE_MCP_SERVERS=$(cat << EOF
 {
   "mobile-mcp": {
     "type": "stdio",
@@ -225,56 +260,12 @@ EOF
 EOF
 )
 
-    # -------------------------------------------------------------------------
-    # Gemini CLI: .gemini/settings.json
-    # -------------------------------------------------------------------------
-    GEMINI_CONFIG="${SCRIPT_DIR}/.gemini/settings.json"
-    GEMINI_DIR="${SCRIPT_DIR}/.gemini"
+# Codex TOML 格式（專案級）
+CODEX_PROJECT_MCP_TOML=$(cat << EOF
+# MobileAgent Project-Scoped Codex Configuration
+# This config is loaded when Codex runs in this directory
+# Ref: https://developers.openai.com/codex/mcp/
 
-    echo -e "${BLUE}[Gemini CLI]${NC} Configuring ${GEMINI_CONFIG}..."
-    mkdir -p "$GEMINI_DIR"
-
-    if [ -f "$GEMINI_CONFIG" ]; then
-        cp "$GEMINI_CONFIG" "${GEMINI_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
-        EXISTING=$(cat "$GEMINI_CONFIG")
-        MERGED=$(echo "$EXISTING" | jq --argjson new "$GEMINI_MCP_SERVERS" '.mcpServers = ((.mcpServers // {}) * $new)')
-        echo "$MERGED" > "$GEMINI_CONFIG"
-        echo -e "${GREEN}[OK]${NC} Gemini CLI - merged MCP servers (backup created)"
-    else
-        echo "{\"mcpServers\": $GEMINI_MCP_SERVERS}" | jq '.' > "$GEMINI_CONFIG"
-        echo -e "${GREEN}[OK]${NC} Gemini CLI - created new config"
-    fi
-
-    # -------------------------------------------------------------------------
-    # Claude Code: .mcp.json
-    # -------------------------------------------------------------------------
-    CLAUDE_CONFIG="${SCRIPT_DIR}/.mcp.json"
-
-    echo -e "${BLUE}[Claude Code]${NC} Configuring ${CLAUDE_CONFIG}..."
-
-    if [ -f "$CLAUDE_CONFIG" ]; then
-        cp "$CLAUDE_CONFIG" "${CLAUDE_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
-        EXISTING=$(cat "$CLAUDE_CONFIG")
-        MERGED=$(echo "$EXISTING" | jq --argjson new "$CLAUDE_MCP_SERVERS" '.mcpServers = ((.mcpServers // {}) * $new)')
-        echo "$MERGED" > "$CLAUDE_CONFIG"
-        echo -e "${GREEN}[OK]${NC} Claude Code - merged MCP servers (backup created)"
-    else
-        echo "{\"mcpServers\": $CLAUDE_MCP_SERVERS}" | jq '.' > "$CLAUDE_CONFIG"
-        echo -e "${GREEN}[OK]${NC} Claude Code - created new config"
-    fi
-
-    # -------------------------------------------------------------------------
-    # Codex: ~/.codex/config.toml
-    # -------------------------------------------------------------------------
-    CODEX_CONFIG="$HOME/.codex/config.toml"
-    CODEX_DIR="$HOME/.codex"
-
-    echo -e "${BLUE}[Codex]${NC} Configuring ${CODEX_CONFIG}..."
-    mkdir -p "$CODEX_DIR"
-
-    CODEX_MCP_TOML=$(cat << EOF
-
-# MobileAgent MCP Servers (auto-generated by set.sh)
 [mcp_servers.mobile-mcp]
 command = "npx"
 args = ["-y", "@mobilenext/mobile-mcp@latest"]
@@ -293,22 +284,82 @@ args = ["-y", "@upstash/context7-mcp"]
 EOF
 )
 
-    if [ -f "$CODEX_CONFIG" ]; then
-        cp "$CODEX_CONFIG" "${CODEX_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
-        if grep -q "mcp_servers.mobile-mcp" "$CODEX_CONFIG" 2>/dev/null; then
-            echo -e "${YELLOW}[SKIP]${NC} Codex - MobileAgent servers already configured"
-        else
-            echo "$CODEX_MCP_TOML" >> "$CODEX_CONFIG"
-            echo -e "${GREEN}[OK]${NC} Codex - appended MCP servers (backup created)"
-        fi
-    else
-        echo "# Codex Configuration" > "$CODEX_CONFIG"
-        echo "$CODEX_MCP_TOML" >> "$CODEX_CONFIG"
-        echo -e "${GREEN}[OK]${NC} Codex - created new config"
+# 通用 JSON MCP 配置函數
+configure_json_mcp() {
+    local name="$1"
+    local config_file="$2"
+    local mcp_servers="$3"
+    local config_dir=$(dirname "$config_file")
+
+    if [ "$JQ_AVAILABLE" != "true" ]; then
+        echo -e "${YELLOW}[SKIP]${NC} ${name} - jq not available"
+        return 1
     fi
 
-    echo ""
+    echo -e "${BLUE}[${name}]${NC} Configuring ${config_file}..."
+    mkdir -p "$config_dir"
+
+    if [ -f "$config_file" ]; then
+        cp "$config_file" "${config_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        EXISTING=$(cat "$config_file")
+        MERGED=$(echo "$EXISTING" | jq --argjson new "$mcp_servers" '.mcpServers = ((.mcpServers // {}) * $new)')
+        echo "$MERGED" > "$config_file"
+        echo -e "${GREEN}[OK]${NC} ${name} - merged MCP servers (backup created)"
+    else
+        echo "{\"mcpServers\": $mcp_servers}" | jq '.' > "$config_file"
+        echo -e "${GREEN}[OK]${NC} ${name} - created new config"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# 1. Cursor: .cursor/mcp.json (專案級)
+# Ref: https://cursor.com/docs/context/mcp
+# -----------------------------------------------------------------------------
+configure_json_mcp "Cursor" "${SCRIPT_DIR}/.cursor/mcp.json" "$STANDARD_MCP_SERVERS"
+
+# -----------------------------------------------------------------------------
+# 2. Claude Code: .mcp.json (專案級，project scope)
+# Ref: https://code.claude.com/docs/en/mcp
+# -----------------------------------------------------------------------------
+configure_json_mcp "Claude Code" "${SCRIPT_DIR}/.mcp.json" "$CLAUDE_MCP_SERVERS"
+
+# -----------------------------------------------------------------------------
+# 3. Gemini CLI: .gemini/settings.json (專案級)
+# Ref: https://google-gemini.github.io/gemini-cli/docs/get-started/configuration.html
+# -----------------------------------------------------------------------------
+configure_json_mcp "Gemini CLI" "${SCRIPT_DIR}/.gemini/settings.json" "$STANDARD_MCP_SERVERS"
+
+# -----------------------------------------------------------------------------
+# 4. OpenAI Codex: .codex/config.toml (專案級)
+# Ref: https://developers.openai.com/codex/mcp/
+# -----------------------------------------------------------------------------
+CODEX_PROJECT_CONFIG="${SCRIPT_DIR}/.codex/config.toml"
+CODEX_PROJECT_DIR="${SCRIPT_DIR}/.codex"
+
+echo -e "${BLUE}[Codex]${NC} Configuring ${CODEX_PROJECT_CONFIG}..."
+mkdir -p "$CODEX_PROJECT_DIR"
+
+if [ -f "$CODEX_PROJECT_CONFIG" ]; then
+    cp "$CODEX_PROJECT_CONFIG" "${CODEX_PROJECT_CONFIG}.backup.$(date +%Y%m%d_%H%M%S)"
 fi
+# 始終重寫專案配置以確保路徑正確
+echo "$CODEX_PROJECT_MCP_TOML" > "$CODEX_PROJECT_CONFIG"
+echo -e "${GREEN}[OK]${NC} Codex - configured project MCP servers"
+
+# -----------------------------------------------------------------------------
+# 5. Roo Code: .roo/mcp.json (專案級)
+# Ref: https://docs.roocode.com/features/mcp/using-mcp-in-roo
+# -----------------------------------------------------------------------------
+configure_json_mcp "Roo Code" "${SCRIPT_DIR}/.roo/mcp.json" "$STANDARD_MCP_SERVERS"
+
+# -----------------------------------------------------------------------------
+# 6. Windsurf: 不支援專案級配置
+# Ref: https://docs.windsurf.com/plugins/cascade/mcp
+# 注意：Windsurf 只支援全域配置 (~/.codeium/mcp_config.json)
+# -----------------------------------------------------------------------------
+echo -e "${YELLOW}[INFO]${NC} Windsurf - no project-level MCP support (global only: ~/.codeium/mcp_config.json)"
+
+echo ""
 
 # =============================================================================
 # Skills Validation and Deployment
@@ -429,28 +480,122 @@ detect_roo() {
     [ -d "$HOME/.roo" ]
 }
 
-# Deploy skills to target directory
+# 安全移除目標路徑（處理 symlink、檔案、目錄、broken symlink）
+safe_remove_target() {
+    local target="$1"
+    
+    # 若目標不存在，直接返回成功
+    if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+        return 0
+    fi
+    
+    # 若為 symlink（包含 broken symlink），使用 unlink
+    if [ -L "$target" ]; then
+        if ! unlink "$target" 2>/dev/null; then
+            echo -e "       ${YELLOW}[WARN]${NC} Failed to unlink symlink: $target"
+            # 嘗試 rm -f 作為備案
+            rm -f "$target" 2>/dev/null || return 1
+        fi
+        return 0
+    fi
+    
+    # 若為目錄，使用 rm -rf
+    if [ -d "$target" ]; then
+        if ! rm -rf "$target" 2>/dev/null; then
+            echo -e "       ${YELLOW}[WARN]${NC} Failed to remove directory: $target"
+            return 1
+        fi
+        return 0
+    fi
+    
+    # 若為檔案，使用 rm -f
+    if [ -f "$target" ]; then
+        if ! rm -f "$target" 2>/dev/null; then
+            echo -e "       ${YELLOW}[WARN]${NC} Failed to remove file: $target"
+            return 1
+        fi
+        return 0
+    fi
+    
+    return 0
+}
+
+# Deploy skills to target directory (symlinks preferred, copy fallback)
 deploy_skills_to() {
     local agent_name="$1"
     local target_dir="$2"
-    
-    mkdir -p "$target_dir"
-    
+    local force_copy="${MOBILE_AGENT_FORCE_COPY:-false}"
+
+    # 確保目標目錄存在
+    if ! mkdir -p "$target_dir" 2>/dev/null; then
+        echo -e "${RED}[ERROR]${NC} ${agent_name}: Cannot create directory ${target_dir}"
+        return 1
+    fi
+
     local deployed=0
+    local symlink_count=0
+    local copy_count=0
+    local failed=0
+
     for skill_dir in "$SKILLS_SOURCE"/*/; do
-        if [ -d "$skill_dir" ]; then
+        if [ -d "$skill_dir" ] && [ -f "${skill_dir}SKILL.md" ]; then
             local skill_name=$(basename "$skill_dir")
             local dest="${target_dir}/${skill_name}"
             
-            if [ -f "${skill_dir}SKILL.md" ]; then
-                rm -rf "$dest"
-                cp -r "$skill_dir" "$dest"
-                deployed=$((deployed + 1))
+            # 解析來源目錄的絕對路徑（處理來源本身是 symlink 的情況）
+            local abs_skill_dir
+            if [ -L "$skill_dir" ]; then
+                # 來源是 symlink，取得實際路徑
+                abs_skill_dir="$(readlink -f "$skill_dir")"
+            else
+                abs_skill_dir="$(cd "$skill_dir" && pwd)"
             fi
+
+            # 安全移除舊的目標（處理各種情況）
+            if ! safe_remove_target "$dest"; then
+                echo -e "       ${RED}[X]${NC} ${skill_name}: Failed to remove old target"
+                failed=$((failed + 1))
+                continue
+            fi
+
+            if [ "$force_copy" = "true" ] || [ "$force_copy" = "1" ]; then
+                # Force copy mode
+                if cp -r "$abs_skill_dir" "$dest" 2>/dev/null; then
+                    copy_count=$((copy_count + 1))
+                else
+                    echo -e "       ${RED}[X]${NC} ${skill_name}: Copy failed"
+                    failed=$((failed + 1))
+                    continue
+                fi
+            else
+                # Try symlink first (preferred for development)
+                if ln -s "$abs_skill_dir" "$dest" 2>/dev/null; then
+                    symlink_count=$((symlink_count + 1))
+                else
+                    # Fallback to copy (Windows/CI/permission issues)
+                    if cp -r "$abs_skill_dir" "$dest" 2>/dev/null; then
+                        copy_count=$((copy_count + 1))
+                    else
+                        echo -e "       ${RED}[X]${NC} ${skill_name}: Both symlink and copy failed"
+                        failed=$((failed + 1))
+                        continue
+                    fi
+                fi
+            fi
+            deployed=$((deployed + 1))
         fi
     done
-    
-    echo -e "${GREEN}[OK]${NC} ${agent_name}: ${deployed} skill(s) -> ${target_dir}"
+
+    # Report deployment method
+    if [ $failed -gt 0 ]; then
+        echo -e "${YELLOW}[WARN]${NC} ${agent_name}: ${deployed} skill(s) deployed, ${failed} failed -> ${target_dir}"
+    elif [ $symlink_count -gt 0 ] && [ $copy_count -eq 0 ]; then
+        echo -e "${GREEN}[OK]${NC} ${agent_name}: ${deployed} skill(s) via symlink -> ${target_dir}"
+    elif [ $copy_count -gt 0 ] && [ $symlink_count -eq 0 ]; then
+        echo -e "${GREEN}[OK]${NC} ${agent_name}: ${deployed} skill(s) via copy -> ${target_dir}"
+    else
+        echo -e "${GREEN}[OK]${NC} ${agent_name}: ${deployed} skill(s) (${symlink_count} symlink, ${copy_count} copy) -> ${target_dir}"
+    fi
     return 0
 }
 

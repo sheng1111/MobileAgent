@@ -1,6 +1,11 @@
 ---
 name: patrol
-description: Patrol social media for a keyword like a coast guard hunting smugglers. Actively search, monitor, and collect opinions about a topic. AI Agent executes autonomously.
+description: Patrol social media for a keyword like a coast guard hunting targets. Actively search, monitor posts, and collect opinions about a topic. Use when user wants to know what people are saying about something on social media.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "2.0"
+compatibility: Requires mobile-mcp MCP server, connected Android device, and social media app installed (Threads, Instagram, X, etc.)
 ---
 
 # Patrol Skill - AI Agent Autonomous Execution

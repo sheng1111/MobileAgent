@@ -168,8 +168,35 @@ print(report.summary)
 - Decision principles and obstacle handling
 - Content extraction and output format
 
+## Skills System
+
+Skills are specialized workflows for common tasks. Use `/skill-name` to invoke.
+
+### Skill Categories
+
+| Category | Skills | Purpose |
+|----------|--------|---------|
+| **Planning** | `task-clarify`, `progress-report` | Convert requests to specs, report progress |
+| **Search** | `search-triage`, `comment-scan`, `patrol` | Multi-round search, analyze comments |
+| **Content** | `article-extract`, `wechat-browse` | Extract articles, browse WeChat (JSON output) |
+| **Commenting** | `comment-draft`, `comment-post` | Generate and post comments |
+| **Memory** | `memory` | Record observations and learnings during task execution |
+| **Utility** | `app-action`, `screen-analyze`, `device-check`, `troubleshoot`, `unicode-setup` | Quick operations, diagnostics |
+
+### Memory System
+
+Persist observations across context compaction:
+
+```
+.memory/
+├── MEMORY.md           # Long-term knowledge (cross-task)
+└── tasks/<task_id>.md  # Task-specific observations
+```
+
+See `.skills/memory/SKILL.md` for detailed instructions.
+
 ## See Also
 
 - `AGENTS.md` - Agent behavioral guidelines (MUST READ for device tasks)
-- `.skills/` - Task-specific skills
+- `.skills/README.md` - Skills overview and selection guide
 - `README.md` - Full project documentation

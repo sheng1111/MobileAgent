@@ -59,6 +59,33 @@ This prevents:
 - Infinite scrolling
 - Losing track of progress
 
+## Memory System
+
+Use the memory skill to persist observations across context compaction:
+
+```
+.memory/
+├── MEMORY.md           # Long-term knowledge (cross-task)
+└── tasks/<task_id>.md  # Task-specific observations
+```
+
+### When to Write Memory
+
+1. **During task**: Record observations, findings, errors
+2. **Before compaction**: Flush important context to memory file
+3. **At task end**: Update long-term memory with reusable learnings
+
+### Memory Format
+
+```markdown
+### 14:30:25 - Screen Analysis
+**Action**: mobile_list_elements_on_screen
+**Result**: Found search button at (543, 150)
+**Observation**: Search is in top-right, not bottom nav
+```
+
+Read `.skills/memory/SKILL.md` for full instructions.
+
 ## Core Loop
 
 ```

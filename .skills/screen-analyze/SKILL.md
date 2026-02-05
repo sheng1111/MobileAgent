@@ -1,9 +1,23 @@
 ---
 name: screen-analyze
-description: Analyze screen state, find UI elements, get coordinates. Use before actions or when user asks about current screen.
+description: Analyze current screen state, find UI elements, and get precise coordinates for automation. Use before performing actions or when user asks about what's on screen.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "1.1"
+compatibility: Requires mobile-mcp MCP server connected to device
 ---
 
 # Screen Analyze Skill
+
+Understand the current screen state and locate UI elements for automation.
+
+## When to Use This Skill
+
+- Before clicking/tapping any element
+- When user asks "What's on the screen?"
+- When automation actions fail (wrong location)
+- To verify screen changed after an action
 
 ## Tool Priority (CRITICAL)
 

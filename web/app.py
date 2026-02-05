@@ -5,6 +5,7 @@ Provides REST API for device management and task execution.
 """
 
 import os
+import re
 import sys
 import signal
 import subprocess
@@ -26,6 +27,156 @@ app = Flask(__name__)
 # In-memory storage for running processes (not persisted)
 running_processes = {}
 processes_lock = threading.Lock()
+
+
+# =============================================================================
+# Output Cleaning
+# =============================================================================
+
+# Patterns for cleaning verbose output
+BASE64_PATTERN = re.compile(
+    r'"data":\s*"[A-Za-z0-9+/=]{100,}"',
+    re.MULTILINE
+)
+BASE64_IMAGE_PATTERN = re.compile(
+    r'data:image/[a-z]+;base64,[A-Za-z0-9+/=]{100,}',
+    re.MULTILINE
+)
+LONG_BASE64_PATTERN = re.compile(
+    r'[A-Za-z0-9+/=]{500,}',
+    re.MULTILINE
+)
+
+# Pattern to match MCP tool JSON responses (multiline JSON blocks)
+MCP_JSON_RESPONSE_PATTERN = re.compile(
+    r'(\w+\.\w+\([^)]+\) success in [\d.]+m?s:)\n\{[\s\S]*?\n\}',
+    re.MULTILINE
+)
+
+# Pattern to match long element lists in JSON
+ELEMENT_LIST_PATTERN = re.compile(
+    r'"text":\s*"Found these elements on screen: \[.*?\]"',
+    re.DOTALL
+)
+
+
+def compactMcpResponse(match):
+    """Compact MCP tool response to a single line summary."""
+    full_match = match.group(0)
+    header = match.group(1)
+    
+    # Extract key info from JSON
+    if '"text":' in full_match:
+        # Find the text content
+        text_match = re.search(r'"text":\s*"([^"]*)"', full_match)
+        if text_match:
+            text = text_match.group(1)
+            # Truncate long text
+            if len(text) > 200:
+                text = text[:200] + '...'
+            return f'{header} "{text}"'
+    
+    return header + ' [response truncated]'
+
+
+def compactElementList(match):
+    """Compact long element list to summary."""
+    full_match = match.group(0)
+    # Count elements
+    element_count = full_match.count('type')
+    return f'"text": "Found {element_count} elements on screen [details truncated]"'
+
+
+def extractFinalAnswer(output):
+    """
+    Extract the AI's final answer from output.
+    Only search in the AI response portion, not in the prompt instruction.
+    Returns (found, content) tuple.
+    """
+    if not output:
+        return False, ""
+    
+    start_tag = "<<FINAL_ANSWER>>"
+    end_tag = "<<END_FINAL_ANSWER>>"
+    
+    # Find where AI response starts (after MCP ready or first thinking block)
+    ai_start_markers = ['mcp startup: ready:', 'mcp: ready', '\nthinking\n']
+    ai_start = 0
+    for marker in ai_start_markers:
+        idx = output.find(marker)
+        if idx != -1:
+            ai_start = max(ai_start, idx)
+    
+    # Search only in AI response portion
+    ai_response = output[ai_start:]
+    
+    # Find the LAST FINAL_ANSWER in AI response (the real one, not template)
+    start_idx = ai_response.rfind(start_tag)
+    if start_idx == -1:
+        return False, ""
+    
+    content_start = start_idx + len(start_tag)
+    end_idx = ai_response.find(end_tag, content_start)
+    if end_idx == -1:
+        return False, ""
+    
+    content = ai_response[content_start:end_idx].strip()
+    
+    # Skip if it's the template text from prompt instruction
+    if content == "Your final answer or result here (be concise but complete)":
+        return False, ""
+    
+    return True, content
+
+
+def determineTaskStatus(output, return_code):
+    """
+    Determine task status from AI's FINAL_ANSWER content.
+    Only check for TASK_FAILED/AWAITING_INPUT in the actual AI response,
+    not in the prompt instruction template.
+    """
+    found, content = extractFinalAnswer(output)
+    
+    if found:
+        # Check content of FINAL_ANSWER for status indicators
+        if content.startswith("TASK_FAILED"):
+            return "failed", "Task reported failure in output"
+        elif content.startswith("AWAITING_INPUT"):
+            return "awaiting", None
+        else:
+            # Has valid FINAL_ANSWER, task completed
+            return "completed", None
+    
+    # No valid FINAL_ANSWER found
+    if return_code == 0:
+        # Process succeeded but no clear answer - mark as completed with note
+        return "completed", None
+    else:
+        return "failed", f"Exit code: {return_code}"
+
+
+def cleanOutputForStorage(output):
+    """
+    Clean CLI output to improve readability and reduce storage.
+    - Remove base64 screenshot data
+    - Compact verbose MCP tool JSON responses
+    - Truncate long element lists
+    """
+    if not output:
+        return output
+    
+    # Remove base64 image data
+    cleaned = BASE64_PATTERN.sub('"data": "[IMAGE_DATA_REMOVED]"', output)
+    cleaned = BASE64_IMAGE_PATTERN.sub('[IMAGE_DATA_REMOVED]', cleaned)
+    cleaned = LONG_BASE64_PATTERN.sub('[LONG_DATA_REMOVED]', cleaned)
+    
+    # Compact MCP JSON responses
+    cleaned = MCP_JSON_RESPONSE_PATTERN.sub(compactMcpResponse, cleaned)
+    
+    # Compact long element lists
+    cleaned = ELEMENT_LIST_PATTERN.sub(compactElementList, cleaned)
+    
+    return cleaned
 
 
 # =============================================================================
@@ -123,7 +274,8 @@ def run_task(task_id, command, device_serial):
         output_lines = []
         for line in process.stdout:
             output_lines.append(line)
-            output_text = "".join(output_lines)
+            # Clean output on every update for consistent display
+            output_text = cleanOutputForStorage("".join(output_lines))
             db.update_task_output(task_id, output_text)
 
         process.wait()
@@ -133,22 +285,11 @@ def run_task(task_id, command, device_serial):
             running_processes.pop(task_id, None)
 
         # Update final status based on both return code and output content
-        output_text = "".join(output_lines)
+        # Clean output for storage
+        output_text = cleanOutputForStorage("".join(output_lines))
 
-        # Check output content for task status indicators
-        # TASK_FAILED in output means the task logic failed, even if process succeeded
-        if "TASK_FAILED" in output_text:
-            final_status = "failed"
-            error_msg = "Task reported failure in output"
-        elif "AWAITING_INPUT" in output_text:
-            final_status = "awaiting"
-            error_msg = None
-        elif process.returncode == 0:
-            final_status = "completed"
-            error_msg = None
-        else:
-            final_status = "failed"
-            error_msg = f"Exit code: {process.returncode}"
+        # Determine task status from AI's FINAL_ANSWER, not from prompt instruction
+        final_status, error_msg = determineTaskStatus(output_text, process.returncode)
 
         db.update_task_status(
             task_id,
@@ -376,11 +517,25 @@ def api_get_task_output(task_id):
     if not task:
         return jsonify({"success": False, "error": "Task not found"}), 404
 
+    # 計算執行時間
+    duration = None
+    if task.get("started_at"):
+        started = datetime.fromisoformat(task["started_at"])
+        if task.get("finished_at"):
+            finished = datetime.fromisoformat(task["finished_at"])
+            duration = (finished - started).total_seconds()
+        else:
+            # 任務還在執行中，計算到目前為止的時間
+            duration = (datetime.now() - started).total_seconds()
+
     return jsonify({
         "success": True,
         "status": task["status"],
         "output": task["output"],
-        "error": task["error"]
+        "error": task["error"],
+        "started_at": task.get("started_at"),
+        "finished_at": task.get("finished_at"),
+        "duration": duration
     })
 
 

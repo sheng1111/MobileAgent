@@ -29,6 +29,7 @@ const i18n = {
         taskHistory: '任務歷史',
         device: '裝置',
         prompt: '提示詞',
+        duration: '執行時間',
         created: '建立時間',
         noTasks: '尚無任務',
 
@@ -91,6 +92,7 @@ const i18n = {
         taskHistory: 'Task History',
         device: 'Device',
         prompt: 'Prompt',
+        duration: 'Duration',
         created: 'Created',
         noTasks: 'No tasks yet',
 
@@ -473,7 +475,7 @@ function renderTaskHistory() {
     tbody.innerHTML = '';
 
     if (tasks.length === 0) {
-        tbody.innerHTML = `<tr id="noTasksRow"><td colspan="6" class="text-center text-muted py-4">${t('noTasks')}</td></tr>`;
+        tbody.innerHTML = `<tr id="noTasksRow"><td colspan="7" class="text-center text-muted py-4">${t('noTasks')}</td></tr>`;
         return;
     }
 
@@ -495,6 +497,21 @@ function renderTaskHistory() {
 
         const createdAt = formatDateTime(task.created_at);
 
+        // 計算執行時間
+        let durationText = '--';
+        if (task.started_at) {
+            const started = new Date(task.started_at);
+            if (task.finished_at) {
+                const finished = new Date(task.finished_at);
+                const durationSec = (finished - started) / 1000;
+                durationText = formatDuration(durationSec);
+            } else if (task.status === 'running') {
+                // 任務還在執行中
+                const durationSec = (new Date() - started) / 1000;
+                durationText = formatDuration(durationSec) + ' ⏱';
+            }
+        }
+
         let actionsHtml = `
             <button class="btn btn-outline-secondary btn-sm" onclick="viewTaskOutput('${task.id}')" title="${t('viewOutput')}">
                 <i class="fas fa-terminal"></i>
@@ -514,6 +531,7 @@ function renderTaskHistory() {
             <td><code class="text-muted">${task.device_serial}</code></td>
             <td><span class="task-prompt" title="${escapeHtml(task.prompt)}">${escapeHtml(promptShort)}</span></td>
             <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+            <td><span class="text-muted small">${durationText}</span></td>
             <td>${createdAt}</td>
             <td>${actionsHtml}</td>
         `;
@@ -584,11 +602,24 @@ function updateCommandPreview() {
 
     let command = '';
     if (cliTool === 'gemini') {
-        command = `gemini -m ${model} -p "${prompt}" --yolo`;
+        // 當 model 為空時使用 command_default 格式
+        if (model) {
+            command = `gemini -m ${model} -p "${prompt}" --yolo`;
+        } else {
+            command = `gemini -p "${prompt}" --yolo`;
+        }
     } else if (cliTool === 'claude') {
-        command = `claude --model ${model} -p "${prompt}" --dangerously-skip-permissions`;
+        if (model) {
+            command = `claude --model ${model} -p "${prompt}" --dangerously-skip-permissions`;
+        } else {
+            command = `claude -p "${prompt}" --dangerously-skip-permissions`;
+        }
     } else if (cliTool === 'codex') {
-        command = `codex -m ${model} "${prompt}"`;
+        if (model) {
+            command = `codex exec -m ${model} --full-auto --skip-git-repo-check "${prompt}"`;
+        } else {
+            command = `codex exec --full-auto --skip-git-repo-check "${prompt}"`;
+        }
     }
 
     document.getElementById('commandPreview').textContent = command;
@@ -658,6 +689,10 @@ async function viewTaskOutput(taskId) {
 /**
  * Parse final answer from output text.
  * Returns object with { found, content, status } or null if not found.
+ * 
+ * IMPORTANT: Only search for FINAL_ANSWER in the AI response portion,
+ * not in the prompt instruction template. The AI response starts after
+ * "mcp startup: ready:" line.
  */
 function parseFinalAnswer(output) {
     if (!output) return null;
@@ -665,14 +700,37 @@ function parseFinalAnswer(output) {
     const startTag = '<<FINAL_ANSWER>>';
     const endTag = '<<END_FINAL_ANSWER>>';
 
-    const startIndex = output.lastIndexOf(startTag);
+    // 找到 AI 回應開始的位置（在 MCP ready 之後）
+    // 這樣可以避免誤解析 prompt 中的 instruction 模板
+    const mcpReadyMarkers = [
+        'mcp startup: ready:',
+        'mcp: ready',
+        'thinking\n'  // Codex 開始思考的標記
+    ];
+    
+    let aiResponseStart = 0;
+    for (const marker of mcpReadyMarkers) {
+        const idx = output.indexOf(marker);
+        if (idx !== -1) {
+            aiResponseStart = Math.max(aiResponseStart, idx);
+        }
+    }
+
+    // 只在 AI 回應部分搜尋 FINAL_ANSWER
+    const aiResponsePortion = output.substring(aiResponseStart);
+    const startIndex = aiResponsePortion.lastIndexOf(startTag);
     if (startIndex === -1) return null;
 
     const contentStart = startIndex + startTag.length;
-    const endIndex = output.indexOf(endTag, contentStart);
+    const endIndex = aiResponsePortion.indexOf(endTag, contentStart);
     if (endIndex === -1) return null;
 
-    const content = output.substring(contentStart, endIndex).trim();
+    const content = aiResponsePortion.substring(contentStart, endIndex).trim();
+
+    // 檢查是否是 prompt 模板中的範例文字
+    if (content === 'Your final answer or result here (be concise but complete)') {
+        return null;  // 這是模板，不是真正的回答
+    }
 
     // Determine status based on content
     let status = 'success';
@@ -783,37 +841,75 @@ function colorizeOutput(text) {
     // Split into lines and process each
     const lines = escaped.split('\n');
     const colorizedLines = lines.map(line => {
+        // ===== Codex-specific patterns =====
+        
+        // MCP tool success (green) - e.g., "filesystem.read_text_file(...) success in 4ms"
+        // Supports tool names with hyphens like mobile-mcp.mobile_click_on_screen
+        if (/^[\w-]+\.[\w_]+\([^)]*\) success in \d+m?s/.test(line)) {
+            return `<span class="output-success">${line}</span>`;
+        }
+        
+        // MCP tool call (cyan) - e.g., "tool mobile-mcp.mobile_list_elements({...})"
+        if (/^tool [\w-]+\.[\w_]+\(/.test(line)) {
+            return `<span class="output-tool">${line}</span>`;
+        }
+        
+        // AI thinking block label (dim)
+        if (/^thinking$/.test(line)) {
+            return `<span class="output-dim">${line}</span>`;
+        }
+        
+        // AI thinking content (dim) - lines starting with ** inside thinking blocks
+        if (/^\*\*.*\*\*$/.test(line)) {
+            return `<span class="output-dim">${line}</span>`;
+        }
+        
+        // MCP startup messages (dim) - e.g., "mcp: fetch starting", "mcp: ready"
+        if (/^mcp[: ]/.test(line)) {
+            return `<span class="output-dim">${line}</span>`;
+        }
+        
+        // Codex header info (system purple) - workdir, model, provider, etc.
+        if (/^(workdir:|model:|provider:|approval:|sandbox:|reasoning|session id:)/i.test(line)) {
+            return `<span class="output-system">${line}</span>`;
+        }
+        
+        // Codex version header
+        if (/^OpenAI Codex v[\d.]+/.test(line) || /^-+$/.test(line)) {
+            return `<span class="output-system">${line}</span>`;
+        }
+        
+        // "codex" label (system)
+        if (/^codex$/.test(line)) {
+            return `<span class="output-system">${line}</span>`;
+        }
+        
+        // User prompt label
+        if (/^user$/.test(line)) {
+            return `<span class="output-info">${line}</span>`;
+        }
+        
+        // Token usage (dim)
+        if (/^tokens used$/.test(line) || /^[\d,]+$/.test(line.trim())) {
+            return `<span class="output-dim">${line}</span>`;
+        }
+        
+        // ===== General patterns =====
+        
         // Error patterns (red)
-        if (/^Error|Error:|error:|ERROR|failed:|Failed:|FAILED|Exception|exception|Traceback/i.test(line) ||
+        if (/^Error:|error:|ERROR|Exception:|Traceback/i.test(line) ||
             /Error executing tool/i.test(line) ||
-            /Attempt \d+ failed/i.test(line)) {
+            /failed to|failure/i.test(line)) {
             return `<span class="output-error">${line}</span>`;
         }
 
         // Warning patterns (yellow)
-        if (/^Warning|Warning:|warning:|WARN|Retrying/i.test(line) ||
+        if (/^Warning:|warning:|WARN|Retrying/i.test(line) ||
             /quota will reset/i.test(line)) {
             return `<span class="output-warning">${line}</span>`;
         }
 
-        // Success patterns (green)
-        if (/^Success|success:|✓|✔|completed|Done|DONE/i.test(line) ||
-            /successfully/i.test(line)) {
-            return `<span class="output-success">${line}</span>`;
-        }
-
-        // System info patterns (purple) - typically at start
-        if (/^(Model:|Device:|Tool:|Starting|Initializing|Loading|Connected)/i.test(line) ||
-            /^(Using|Version:|Config:|Session|Agent)/i.test(line) ||
-            /^\[.*\]$/.test(line)) {
-            return `<span class="output-system">${line}</span>`;
-        }
-
-        // Info patterns (blue)
-        if (/^Info:|INFO|Note:|→|➤|►/i.test(line)) {
-            return `<span class="output-info">${line}</span>`;
-        }
-
+        // Default: no color (let it be readable default text)
         return line;
     });
 
@@ -823,6 +919,8 @@ function colorizeOutput(text) {
 /**
  * Strip FINAL_ANSWER tags from output for cleaner display.
  * The tags are still parsed separately for the Final Answer container.
+ * 
+ * IMPORTANT: Only strip AI's FINAL_ANSWER, not the prompt instruction template.
  */
 function stripFinalAnswerTags(output) {
     if (!output) return output;
@@ -830,17 +928,61 @@ function stripFinalAnswerTags(output) {
     const startTag = '<<FINAL_ANSWER>>';
     const endTag = '<<END_FINAL_ANSWER>>';
 
-    const startIndex = output.lastIndexOf(startTag);
-    if (startIndex === -1) return output;
+    // 找到 AI 回應開始的位置
+    const mcpReadyMarkers = [
+        'mcp startup: ready:',
+        'mcp: ready',
+        'thinking\n'
+    ];
+    
+    let aiResponseStart = 0;
+    for (const marker of mcpReadyMarkers) {
+        const idx = output.indexOf(marker);
+        if (idx !== -1) {
+            aiResponseStart = Math.max(aiResponseStart, idx);
+        }
+    }
 
+    // 只在 AI 回應部分搜尋 FINAL_ANSWER
+    const aiResponsePortion = output.substring(aiResponseStart);
+    const relativeStartIndex = aiResponsePortion.lastIndexOf(startTag);
+    if (relativeStartIndex === -1) return output;
+
+    const startIndex = aiResponseStart + relativeStartIndex;
     const endIndex = output.indexOf(endTag, startIndex);
     if (endIndex === -1) return output;
+
+    // 檢查是否是 prompt 模板中的範例文字
+    const content = output.substring(startIndex + startTag.length, endIndex).trim();
+    if (content === 'Your final answer or result here (be concise but complete)') {
+        return output;  // 不移除模板
+    }
 
     // Remove the entire FINAL_ANSWER block from output
     const beforeTag = output.substring(0, startIndex).trimEnd();
     const afterTag = output.substring(endIndex + endTag.length).trimStart();
 
     return beforeTag + (afterTag ? '\n' + afterTag : '');
+}
+
+/**
+ * 格式化執行時間為人類可讀格式
+ */
+function formatDuration(seconds) {
+    if (seconds === null || seconds === undefined) return '--';
+    
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (mins === 0) {
+        return `${secs}s`;
+    } else if (mins < 60) {
+        return `${mins}m ${secs}s`;
+    } else {
+        const hours = Math.floor(mins / 60);
+        const remainingMins = mins % 60;
+        return `${hours}h ${remainingMins}m ${secs}s`;
+    }
 }
 
 /**
@@ -861,6 +1003,14 @@ async function pollTaskOutput() {
     const statusClass = getBootstrapBadgeClass(data.status);
     badge.className = `badge ${statusClass}`;
     badge.textContent = t(data.status);
+
+    // Update duration display
+    const durationEl = document.getElementById('outputDurationValue');
+    if (data.duration !== null && data.duration !== undefined) {
+        durationEl.textContent = formatDuration(data.duration);
+    } else {
+        durationEl.textContent = '--';
+    }
 
     // Update output content (strip FINAL_ANSWER tags for cleaner display)
     let rawOutput = data.output || '';
@@ -944,19 +1094,65 @@ function escapeHtml(text) {
 }
 
 /**
- * Get effective task status by checking output content.
- * This handles cases where DB status is 'completed' but output contains TASK_FAILED.
+ * Extract AI's actual FINAL_ANSWER content from output.
+ * Only searches in AI response portion (after MCP ready), not in prompt instruction.
+ * Returns null if no valid FINAL_ANSWER found.
+ */
+function extractFinalAnswerContent(output) {
+    if (!output) return null;
+    
+    const startTag = '<<FINAL_ANSWER>>';
+    const endTag = '<<END_FINAL_ANSWER>>';
+    
+    // Find where AI response starts (after MCP ready)
+    const aiStartMarkers = ['mcp startup: ready:', 'mcp: ready', '\nthinking\n'];
+    let aiStart = 0;
+    for (const marker of aiStartMarkers) {
+        const idx = output.indexOf(marker);
+        if (idx !== -1) {
+            aiStart = Math.max(aiStart, idx);
+        }
+    }
+    
+    // Search only in AI response portion
+    const aiResponse = output.substring(aiStart);
+    
+    // Find the LAST FINAL_ANSWER (the real one, not template)
+    const startIdx = aiResponse.lastIndexOf(startTag);
+    if (startIdx === -1) return null;
+    
+    const contentStart = startIdx + startTag.length;
+    const endIdx = aiResponse.indexOf(endTag, contentStart);
+    if (endIdx === -1) return null;
+    
+    const content = aiResponse.substring(contentStart, endIdx).trim();
+    
+    // Skip if it's the template text
+    if (content === 'Your final answer or result here (be concise but complete)') {
+        return null;
+    }
+    
+    return content;
+}
+
+/**
+ * Get effective task status by checking FINAL_ANSWER content.
+ * Only checks the actual AI response, not prompt instruction template.
  */
 function getEffectiveTaskStatus(task) {
     if (!task) return 'idle';
 
-    // If status is completed, check output for actual result
+    // If status is completed, verify from FINAL_ANSWER content
     if (task.status === 'completed' && task.output) {
-        if (task.output.includes('TASK_FAILED')) {
-            return 'failed';
-        }
-        if (task.output.includes('AWAITING_INPUT')) {
-            return 'awaiting';
+        const finalAnswer = extractFinalAnswerContent(task.output);
+        if (finalAnswer) {
+            // Check if FINAL_ANSWER starts with failure/awaiting indicators
+            if (finalAnswer.startsWith('TASK_FAILED')) {
+                return 'failed';
+            }
+            if (finalAnswer.startsWith('AWAITING_INPUT')) {
+                return 'awaiting';
+            }
         }
     }
 

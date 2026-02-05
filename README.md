@@ -177,26 +177,41 @@ found, el = router.scroll_to_element(text="Settings", max_scrolls=5)
 
 ## 🎓 Skills System
 
-MobileAgent uses a unified skills source directory (`.skills/`). Running `set.sh` automatically detects installed AI Agents and deploys skills to their respective directories.
+MobileAgent uses the open [Agent Skills specification](https://agentskills.io) for AI agent capabilities. Skills are stored in `.skills/` and automatically deployed to detected AI Agents.
+
+### Agent Skills Standard
+
+Each skill follows the specification with proper frontmatter:
+
+```yaml
+---
+name: skill-name
+description: What it does and when to use it.
+license: MIT
+metadata:
+  author: MobileAgent
+  version: "1.0"
+---
+```
 
 ### Supported AI Agents
 
-| AI Agent | Detection Method | Deploy Path |
-|----------|-----------------|-------------|
-| Cursor | `~/.cursor/` exists | `.cursor/skills/` |
-| Claude Code | `claude` command or `~/.claude/` | `.claude/skills/` |
-| Gemini CLI | `gemini` command or `~/.gemini/` | `.gemini/skills/` |
-| Codex CLI | `codex` command or `~/.codex/` | `.codex/skills/` |
-| Windsurf | `~/.codeium/` exists | `.windsurf/skills/` |
-| Roo Code | `~/.roo/` exists | `.roo/skills/` |
+| AI Agent | Skills Directory | MCP Config |
+|----------|-----------------|------------|
+| Cursor | `.cursor/skills/` | `.cursor/mcp.json` |
+| Claude Code | `.claude/skills/` | `.mcp.json` |
+| Gemini CLI | `.gemini/skills/` | `.gemini/settings.json` |
+| Codex CLI | `.codex/skills/` | `.codex/config.toml` |
+| Roo Code | `.roo/skills/` | `.roo/mcp.json` |
+| Windsurf | `.windsurf/skills/` | Global only |
 
 ### Adding a Skill
 
 1. Create a new directory under `.skills/`
-2. Create a `SKILL.md` file (with frontmatter)
+2. Create a `SKILL.md` file with proper frontmatter
 3. Run `./set.sh` to validate and deploy
 
-See `.skills/README.md` for details.
+See `.skills/README.md` for the complete Agent Skills specification and examples.
 
 ### 🏄 Patrol Skill (海巡)
 
